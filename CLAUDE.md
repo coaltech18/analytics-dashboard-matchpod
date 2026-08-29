@@ -106,6 +106,17 @@ on every metric label. Do not darken the greys to make it look moodier.
 **Pink is for large numerals, rules and accents — never body copy.** It sits at
 4.9:1, which is comfortable at 34px and tiring at 11px.
 
+**Text ON pink must be ink, never white.** White on `#FF007A` measures
+**3.8:1 and fails AA**; `--on-pink` (`#121212`) is **4.94:1** and passes. This
+caught the pressed range/series buttons, the primary button and the skip link.
+It is also the brand's own ink-on-pink pairing (`brand/logo4`, `logo8`).
+
+**Type is set from `--fs-label` / `--fs-body` / `--fs-lead`, not literals.**
+The page was originally 10/11px, which passed contrast but was genuinely hard
+to read for a tool opened daily. Nothing renders below 11px, including the SVG
+chart axis labels — those are `fontSize` attributes in `Chart.tsx` that a CSS
+pass will silently miss. Do not take these back down.
+
 **Nothing depends on colour alone.** The activity composition bar and the cohort
 heat tint both carry their values as text in the same element.
 

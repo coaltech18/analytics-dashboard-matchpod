@@ -29,6 +29,18 @@
   --body:    'Space Grotesk', system-ui, sans-serif;
   --mono:    'Space Mono', ui-monospace, 'Courier New', monospace;
 
+  /* Text on a pink field. White measures 3.8:1 and FAILS AA at these sizes;
+     ink is 4.94:1 and passes. It is also the brand's own ink-on-pink pairing
+     (brand/logo4, logo8). Never put white on pink at body size. */
+  --on-pink:   #121212;   /* 4.94:1 on --pink */
+
+  /* Type scale. The dashboard was originally set at 10/11px, which measured
+     fine for contrast but was genuinely hard to read for a tool used daily.
+     Do not take these back down; small mono is where legibility goes first. */
+  --fs-label:  11px;      /* uppercase mono labels, captions, table heads */
+  --fs-body:   12.5px;    /* buttons, tables, prose, messages */
+  --fs-lead:   13.5px;    /* skip link, primary button, inputs */
+
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
@@ -50,8 +62,8 @@ button, input, .cell, .panel { border-radius: 0; }
 /* ── skip link ─────────────────────────────────────────────────────────── */
 .skip {
   position: absolute; left: -9999px; top: 0; z-index: 10;
-  background: var(--pink); color: #fff; padding: 10px 16px;
-  font-family: var(--mono); font-size: 12px;
+  background: var(--pink); color: var(--on-pink); padding: 11px 16px; font-weight: 700;
+  font-family: var(--mono); font-size: var(--fs-lead);
 }
 .skip:focus { left: 0; }
 
@@ -69,12 +81,12 @@ button, input, .cell, .panel { border-radius: 0; }
 /* The mark is optically heavier than the cap-height beside it, so it sits a
    touch smaller than the type it aligns to rather than matching it exactly. */
 .brand-logo { color: var(--pink); flex: none; }
-.meta { display: flex; gap: 18px; font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
+.meta { display: flex; gap: 18px; font-family: var(--mono); font-size: var(--fs-body); color: var(--fg-faint); }
 .meta b { color: var(--fg-dim); font-weight: 400; }
 
 /* ── buttons ──────────────────────────────────────────────────────────── */
 .btn {
-  font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+  font-family: var(--mono); font-size: var(--fs-body); letter-spacing: 0.08em;
   text-transform: uppercase; padding: 9px 14px; cursor: pointer;
   background: var(--panel-2); color: var(--fg-dim);
   border: 1px solid var(--line-hi);
@@ -82,12 +94,12 @@ button, input, .cell, .panel { border-radius: 0; }
 }
 .btn:hover:not(:disabled) { background: var(--panel-3); color: var(--fg); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn[aria-pressed='true'] { background: var(--pink); border-color: var(--pink); color: #fff; }
+.btn[aria-pressed='true'] { background: var(--pink); border-color: var(--pink); color: var(--on-pink); font-weight: 700; }
 .btn-primary {
-  background: var(--pink); border-color: var(--pink); color: #fff;
-  padding: 12px 18px; font-size: 12px; width: 100%;
+  background: var(--pink); border-color: var(--pink); color: var(--on-pink);
+  padding: 13px 18px; font-size: var(--fs-lead); width: 100%; font-weight: 700;
 }
-.btn-primary:hover:not(:disabled) { background: #E0006B; color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #FF2E90; color: var(--on-pink); }
 
 :focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
 
@@ -99,10 +111,10 @@ section { margin-bottom: 34px; }
   display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
 }
 h2 {
-  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  font-family: var(--mono); font-size: var(--fs-body); font-weight: 700;
   letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-dim); margin: 0;
 }
-.sec-note { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); }
+.sec-note { font-family: var(--mono); font-size: var(--fs-label); color: var(--fg-faint); line-height: 1.5; }
 
 /* ── metric grid ──────────────────────────────────────────────────────────
    Hairlines are a 1px ring per cell, NOT the container's background showing
@@ -119,31 +131,31 @@ h2 {
 }
 .cell.key { background: var(--panel-2); }
 .cell dt {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+  font-family: var(--mono); font-size: var(--fs-label); letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--fg-faint); margin-bottom: 9px;
 }
 .cell dd { margin: 0; }
 .value { font-family: var(--display); font-size: 34px; line-height: 1; letter-spacing: -0.02em; }
 .cell.key .value { color: var(--pink); }
-.sub { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); margin-top: 7px; }
+.sub { font-family: var(--mono); font-size: var(--fs-label); color: var(--fg-faint); margin-top: 7px; }
 .spark { display: block; width: 100%; height: 26px; margin-top: 10px; }
 
 /* ── funnel bars ──────────────────────────────────────────────────────── */
 .bars { background: var(--panel); box-shadow: 0 0 0 1px var(--line); padding: 18px; margin-top: 1px; }
 .bar-row { margin-bottom: 16px; }
 .bar-row:last-child { margin-bottom: 0; }
-.bar-label { font-family: var(--mono); font-size: 11px; color: var(--fg-dim); }
-.bar-val { font-family: var(--mono); font-size: 11px; color: var(--fg); float: right; }
+.bar-label { font-family: var(--mono); font-size: var(--fs-body); color: var(--fg-dim); }
+.bar-val { font-family: var(--mono); font-size: var(--fs-body); color: var(--fg); float: right; }
 .bar-track { height: 8px; background: var(--panel-3); margin: 7px 0 5px; }
 .bar-fill { height: 100%; background: var(--pink); }
-.bar-drop { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); }
+.bar-drop { font-family: var(--mono); font-size: var(--fs-label); color: var(--fg-faint); line-height: 1.5; }
 
 /* ── activity composition ─────────────────────────────────────────────── */
 .stack { display: flex; height: 26px; margin-top: 1px; box-shadow: 0 0 0 1px var(--line); }
 .stack span { display: block; }
 .legend {
   display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px;
-  font-family: var(--mono); font-size: 10px; color: var(--fg-faint);
+  font-family: var(--mono); font-size: var(--fs-label); color: var(--fg-faint);
 }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 6px; }
 .legend b { font-weight: 400; }
@@ -151,20 +163,20 @@ h2 {
 /* ── chart ────────────────────────────────────────────────────────────── */
 .chart-panel { background: var(--panel); box-shadow: 0 0 0 1px var(--line); padding: 16px; }
 .chart-panel svg { display: block; width: 100%; height: auto; }
-.chart-summary { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); margin-top: 10px; line-height: 1.6; }
+.chart-summary { font-family: var(--mono); font-size: var(--fs-label); color: var(--fg-faint); margin-top: 10px; line-height: 1.6; }
 details { margin-top: 12px; }
 summary {
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+  font-family: var(--mono); font-size: var(--fs-label); letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--fg-dim); cursor: pointer; padding: 6px 0;
 }
 
 /* ── tables ───────────────────────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; background: var(--panel); box-shadow: 0 0 0 1px var(--line); }
-table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 11px; }
-caption { text-align: left; padding: 14px 16px 0; color: var(--fg-faint); font-size: 10px; }
+table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: var(--fs-body); }
+caption { text-align: left; padding: 14px 16px 0; color: var(--fg-faint); font-size: var(--fs-label); }
 th, td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
 thead th {
-  color: var(--fg-faint); font-weight: 400; font-size: 10px;
+  color: var(--fg-faint); font-weight: 400; font-size: var(--fs-label);
   letter-spacing: 0.08em; text-transform: uppercase;
 }
 tbody th { text-align: left; font-weight: 400; color: var(--fg); }
@@ -176,11 +188,11 @@ td.heat { background: rgba(255, 0, 122, calc(var(--heat) * 0.22)); }
 /* ── messages ─────────────────────────────────────────────────────────── */
 .msg {
   background: var(--panel-2); box-shadow: 0 0 0 1px var(--line-hi);
-  padding: 14px 16px; font-family: var(--mono); font-size: 11px;
+  padding: 14px 16px; font-family: var(--mono); font-size: var(--fs-body);
   color: var(--fg-dim); line-height: 1.6;
 }
 .msg.error { box-shadow: 0 0 0 1px var(--pink); color: var(--fg); }
-.empty { padding: 22px 16px; font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
+.empty { padding: 22px 16px; font-family: var(--mono); font-size: var(--fs-body); color: var(--fg-faint); }
 .hidden { display: none; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -193,14 +205,14 @@ td.heat { background: rgba(255, 0, 122, calc(var(--heat) * 0.22)); }
 .gate-logo { color: var(--pink); display: block; margin: 0 0 16px; }
 .gate h1 { font-family: var(--display); font-size: 22px; margin: 0 0 6px; }
 .gate h1 span { color: var(--pink); }
-.gate-sub { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); margin-bottom: 22px; line-height: 1.6; }
+.gate-sub { font-family: var(--mono); font-size: var(--fs-label); color: var(--fg-faint); margin-bottom: 22px; line-height: 1.6; }
 label {
-  display: block; font-family: var(--mono); font-size: 10px;
+  display: block; font-family: var(--mono); font-size: var(--fs-label);
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-faint); margin-bottom: 6px;
 }
 input {
   width: 100%; background: var(--bg); border: 1px solid var(--line-hi);
-  color: var(--fg); font-family: var(--mono); font-size: 13px;
+  color: var(--fg); font-family: var(--mono); font-size: var(--fs-lead);
   padding: 11px 12px; margin-bottom: 16px;
 }
 input:focus { border-color: var(--pink); outline: none; }

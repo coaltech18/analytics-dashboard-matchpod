@@ -75,7 +75,7 @@ export function Chart({ rows, seriesKey, seriesLabel, range }: Props) {
     // or transparent image that still "downloads fine".
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = `
-      text { font-family: 'Space Mono', monospace; font-size: 10px; fill: #8C8983; }
+      text { font-family: 'Space Mono', monospace; font-size: 11px; fill: #8C8983; }
       .grid-line { stroke: #2A2A2A; stroke-width: 1; }
       .series { fill: none; stroke: #FF007A; stroke-width: 2; stroke-linejoin: round; }
       .trend { fill: none; stroke: #A8A5A0; stroke-width: 1.2; stroke-dasharray: 4 3; }
@@ -123,7 +123,7 @@ export function Chart({ rows, seriesKey, seriesLabel, range }: Props) {
           {ticks.map((t) => (
             <g key={t.y}>
               <line className="grid-line" x1={PAD_L} y1={t.y} x2={W - PAD_R} y2={t.y} stroke="#2A2A2A" />
-              <text x={PAD_L - 8} y={t.y + 3} textAnchor="end" fill="#8C8983" fontSize="10" fontFamily="'Space Mono', monospace">
+              <text x={PAD_L - 8} y={t.y + 3} textAnchor="end" fill="#A8A5A0" fontSize="11" fontFamily="'Space Mono', monospace">
                 {num(t.v)}
               </text>
             </g>
@@ -139,8 +139,8 @@ export function Chart({ rows, seriesKey, seriesLabel, range }: Props) {
               x={px(i, rows.length)}
               y={H - 8}
               textAnchor={i === 0 ? 'start' : i === rows.length - 1 ? 'end' : 'middle'}
-              fill="#8C8983"
-              fontSize="10"
+              fill="#A8A5A0"
+              fontSize="11"
               fontFamily="'Space Mono', monospace"
             >
               {dayMonth(rows[i]!.day)}
