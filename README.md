@@ -10,13 +10,21 @@ signup cohorts. CSV / PNG / PDF export.
 
 ## First-time setup
 
-The dashboard needs two things deployed from the **MatchPod app repo** before it
-shows anything. Both are one-time.
+Everything the dashboard needs lives in this repo. The app repo is not
+involved. All of this is one-time.
 
-### 1. Apply the migration
+### 1. Create the views
 
-`supabase/migrations/048_metrics_views.sql` in the app repo. Creates the five
-`mp_metrics_*` views, readable only by the service role.
+Open `sql/metrics_views.sql`, paste it into the Supabase SQL editor for the
+**production** project, run it.
+
+It creates five read-only `mp_metrics_*` views plus `mp_real_profiles`, all
+revoked from every app role so only the service role can read them. It creates
+no tables and writes no rows, and every statement is `create or replace`, so
+running it twice is harmless.
+
+It is deliberately not a numbered migration — see `CLAUDE.md` for why, and for
+the two things that costs you.
 
 ### 2. Create the one operator account
 
@@ -34,14 +42,14 @@ select id, email from auth.users where email = 'you@example.com';
 
 ### 3. Deploy the edge function
 
-From the app repo:
+From this repo:
 
 ```bash
-supabase functions deploy metrics
+npx supabase functions deploy metrics --project-ref <prod-ref>
 ```
 
 ```bash
-supabase secrets set METRICS_ADMIN_IDS=<your-user-uuid> METRICS_ALLOWED_ORIGINS=https://metrics.matchpod.in
+npx supabase secrets set --project-ref <prod-ref> METRICS_ADMIN_IDS=<your-user-uuid> METRICS_ALLOWED_ORIGINS=https://metrics.matchpod.in
 ```
 
 `METRICS_ADMIN_IDS` takes a comma-separated list. If it is unset the function
@@ -102,7 +110,7 @@ Nothing deploys from git — changes go live by re-uploading `index.html`.
 
 ## Reading the numbers honestly
 
-Two things to keep in mind — the app repo's `docs/METRICS.md` has the full list:
+Two things to keep in mind — `docs/METRICS.md` has the full list:
 
 - **Activity means "opened the app", not "used it".** It comes from
   `profiles.last_seen`, written on foreground at most once every five minutes.
@@ -120,7 +128,7 @@ Seeded demo profiles are excluded from every figure.
 | "Not configured" | `MP_CONFIG` still has the placeholder values |
 | "not on the metrics allowlist" | your user id is not in `METRICS_ADMIN_IDS` |
 | "Dashboard not configured" (503) | `METRICS_ADMIN_IDS` was never set |
-| "Some views failed" | migration 048 is not applied to that project |
+| "Some views failed" | `sql/metrics_views.sql` was never run on that project |
 | CORS error in the console | this origin is not in `METRICS_ALLOWED_ORIGINS` |
 | CORS error, but the origin *looks* right | you are on `http://`, the allowlist says `https://`. Finish SSL |
 | Numbers look tiny / wrong | you are pointed at staging, not production |

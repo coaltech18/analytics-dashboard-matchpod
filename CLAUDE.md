@@ -30,19 +30,38 @@ revoked from every app role — and making it work would mean leaking the key.
 
 ## Where the backend lives
 
-Both pieces are in the **MatchPod app repo**, not here:
+All three pieces are **here**. This repo deploys itself; the app repo is never
+touched.
 
 | thing | what it is |
 |---|---|
-| `supabase/migrations/048_metrics_views.sql` | Creates `mp_metrics_overview`, `_activity`, `_cohorts`, `_engagement`, `_daily`, plus the `mp_real_profiles` base view. Service-role only. |
+| `sql/metrics_views.sql` | Creates `mp_metrics_overview`, `_activity`, `_cohorts`, `_engagement`, `_daily`, plus the `mp_real_profiles` base view. Service-role only. |
 | `supabase/functions/metrics/index.ts` | Edge function. Holds the service key, checks the caller against an allowlist, returns aggregate JSON. |
+| `docs/METRICS.md` | What every metric is honestly worth — read it before quoting a number. |
 
-They stay there because a migration has to remain in the numbered chain of the
-repo that is `supabase link`ed to the project, and the function deploys from
-that same repo. Do not copy them here.
+`sql/metrics_views.sql` is **run by hand, once**, in the Supabase SQL editor —
+it is deliberately not a numbered migration. It is idempotent
+(`create or replace view` throughout) and creates no tables and writes no rows,
+so re-running it is free and dropping it is a no-op. That is what lets it live
+outside the app's migration chain.
 
-That repo's `docs/METRICS.md` explains what every metric is honestly worth —
-read it before quoting a number.
+Two consequences of that choice, both accepted on purpose:
+
+- A fresh or reset environment will not have these views — nothing recreates
+  them automatically. Re-run the file.
+- If the app ever renames a column these views read (`profiles.last_seen` is
+  the fragile one), they break here and nobody in the app repo sees it. A
+  number goes wrong quietly. Check this dashboard after app schema changes.
+
+The function deploys from this repo with an explicit ref:
+
+```bash
+npx supabase functions deploy metrics --project-ref <prod-ref>
+```
+
+Standalone means standalone from the app **codebase**, not from its
+**database**. These views read `profiles`, `swipes`, `matches`, `messages`,
+`analytics_events` and `app_config` — that is where the numbers are.
 
 ## The data flow
 
@@ -57,7 +76,7 @@ this page  ──JWT──▶  functions/v1/metrics  ──service role──▶
 Point it at **production** for real numbers; the staging project holds demo
 seeds and a couple of testers.
 
-Two secrets are set on the edge function, in the app repo, not here:
+Two secrets are set on the edge function itself, never in this page's source:
 
 - `METRICS_ADMIN_IDS` — comma-separated user uuids. **Unset means nobody gets
   in.** It fails closed on purpose.
