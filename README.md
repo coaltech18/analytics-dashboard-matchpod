@@ -1,6 +1,6 @@
 # MatchPod Analytics Dashboard
 
-Single-operator metrics dashboard. React 18 + TypeScript + Vite, in `app/`.
+Single-operator metrics dashboard. React 18 + TypeScript + Vite.
 
 Funnel, activity and dormancy, engagement, waitlist, a 90-day trend chart, and
 signup cohorts. CSV / PNG / PDF export.
@@ -57,7 +57,7 @@ denies everyone — it fails closed, so a half-finished deploy exposes nothing.
 ### 4. Configure this page
 
 ```bash
-cd app && cp .env.example .env
+cp .env.example .env
 ```
 
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from Supabase → Settings
@@ -79,11 +79,11 @@ shared hosting at `metrics.matchpod.in`.
    root, usually `public_html/metrics`.
 2. If Hostinger leaves a parking page or `default.php` in that folder, delete
    it — it can win over the `index.html` you are about to upload.
-3. Build, then upload **the contents of `app/dist/`** into that folder — the
+3. Build, then upload **the contents of `dist/`** into that folder — the
    files, not the folder itself:
 
    ```bash
-   cd app && npm install && npm run build
+   npm install && npm run build
    ```
 
    `base` is `./`, so the bundle works at a subdomain root or a subfolder
@@ -106,7 +106,54 @@ certificate issuance fails until you grey-cloud it.
 Whatever origin you land on must be in `METRICS_ALLOWED_ORIGINS`.
 
 Nothing deploys from git — changes go live by re-running `npm run build` and
-re-uploading `app/dist/`.
+re-uploading `dist/`.
+
+---
+
+## Layout
+
+```
+index.html          Vite entry
+src/
+  main.tsx          mounts App
+  App.tsx           session gate: login or dashboard
+  components/
+    Login.tsx       the one operator login
+    Dashboard.tsx   sections, controls, data loading
+    Chart.tsx       trend chart, PNG export, accessible data table
+    Metrics.tsx     metric cells, funnel bars, activity bar, cohorts
+  lib/
+    supabase.ts     client + the one fetch to the metrics function
+    types.ts        payload shape, every field nullable
+    csv.ts          CSV export: RFC 4180 + UTF-8 BOM
+    format.ts       number/date formatting, download helper
+    mock.ts         dev-only fake data
+sql/                the views — run once in the SQL editor
+supabase/functions/ the edge function
+docs/METRICS.md     what each number is honestly worth
+```
+
+## Working on it
+
+```bash
+npm install && npm run dev
+```
+
+### Without a backend
+
+```bash
+echo VITE_MOCK=1 > .env.local && npm run dev
+```
+
+Skips the login gate and feeds the dashboard deterministic fake data. Gated
+behind `import.meta.env.DEV`, so `npm run build` folds it to a constant and
+drops the module — it cannot be switched on in a deployed page. Confirm with:
+
+```bash
+grep -c mockPayload dist/assets/*.js
+```
+
+which must print `0`.
 
 ---
 
@@ -138,7 +185,7 @@ Seeded demo profiles are excluded from every figure.
 
 | symptom | cause |
 |---|---|
-| "Not configured" | `app/.env` is missing or still has placeholder values |
+| "Not configured" | `.env` is missing or still has placeholder values |
 | "not on the metrics allowlist" | your user id is not in `METRICS_ADMIN_IDS` |
 | "Dashboard not configured" (503) | `METRICS_ADMIN_IDS` was never set |
 | "Some views failed" | `sql/metrics_views.sql` was never run on that project |

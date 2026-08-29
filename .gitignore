@@ -1,11 +1,21 @@
+# Build output and dependencies
+node_modules/
+dist/
+tsconfig.tsbuildinfo
+
+# Every local env file. .env.example is the only one that ships — it holds
+# placeholders, and the build inlines whatever VITE_* vars are set, so a stray
+# .env with real values would end up inside dist/.
+.env
+.env.*
+!.env.example
+
 # Agent tooling — local, reinstallable, not project code
 .claude/
+.qodo/
 .agents/
 skills-lock.json
 
 # OS noise
 .DS_Store
 Thumbs.db
-
-# There is no build step. Nothing here should ever be generated.
-node_modules/

@@ -1,6 +1,6 @@
 # MatchPod Analytics Dashboard
 
-React 18 + TypeScript + Vite, in `app/`. Built with `npm run build`, deployed
+React 18 + TypeScript + Vite at the repo root. Built with `npm run build`, deployed
 as static files — there is no server.
 
 The frontend is the frontend only. It reads numbers from the MatchPod Supabase project
@@ -72,7 +72,7 @@ this page  ──JWT──▶  functions/v1/metrics  ──service role──▶
 
 ## Configuration
 
-`app/.env`: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Point them at
+`.env`: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Point them at
 **production** for real numbers; the staging project holds demo seeds and a
 couple of testers.
 
@@ -138,7 +138,7 @@ a change works without loading it.
 Without the live backend, use the built-in mock:
 
 ```bash
-cd app && echo VITE_MOCK=1 > .env.local && npm run dev
+echo VITE_MOCK=1 > .env.local && npm run dev
 ```
 
 Then check: the chart at 7/30/90 days, both exports, and the page at 375px
