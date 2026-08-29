@@ -76,7 +76,12 @@ function cohorts(): CohortRow[] {
 export function mockPayload(): MetricsPayload {
   const d = daily();
   const totalSignups = d.reduce((a, x) => a + (x.signups ?? 0), 0);
-  const onboarded = d.reduce((a, x) => a + (x.onboardings ?? 0), 0);
+  // Derived from signups, NOT by summing the daily onboardings series — that
+  // series is deliberately null here (production cannot date onboardings), and
+  // summing it gave 0, which then made active_7d_pct render as "Infinity%".
+  // The real overview reads is_onboarded off profiles, so it is a genuine
+  // number even where the daily breakdown is missing; the mock mirrors that.
+  const onboarded = Math.round(totalSignups * 0.7);
 
   return {
     generatedAt: new Date().toISOString(),

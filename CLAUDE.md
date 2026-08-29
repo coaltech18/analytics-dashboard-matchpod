@@ -117,6 +117,25 @@ chart carries a prose summary. Keep both if you change the chart.
 tool checked daily, not a landing page — scroll reveals and count-up animations
 actively hurt it.
 
+## Branding
+
+The mark, palette and placement rules live in `brand/README.md`. Read it before
+touching the logo or the favicon.
+
+The short version: pink `#ff007a`, ink `#252525`, paper `#fff`. The house mark
+is **inlined** in `src/components/Logo.tsx` with `currentColor` and cropped to
+its true bounds — not loaded as a file, and not padded back out to the source
+1000×1000 square. The favicon is `public/favicon.svg`, white on pink,
+full-bleed because a circle throws away its corners at 16px.
+
+Do not use the full lockup (`brand/logo1.svg`) in the app: the header already
+sets the name in Archivo Black, and the lockup carries its own wordmark, so the
+two together show "MatchPod" twice in two typefaces.
+
+Note that brand ink `#252525` and this page's `--panel` `#121212` differ on
+purpose — see `brand/README.md` for why lightening the panel would break the
+measured contrast ratios.
+
 ## Design
 
 Tactical Telemetry: 90° corners throughout (no `border-radius`), hairline rules

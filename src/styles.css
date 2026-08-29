@@ -61,8 +61,14 @@ button, input, .cell, .panel { border-radius: 0; }
   align-items: flex-end; justify-content: space-between;
   padding-bottom: 18px; border-bottom: 2px solid var(--pink); margin-bottom: 26px;
 }
-.brand { font-family: var(--display); font-size: 26px; letter-spacing: -0.02em; margin: 0; }
+.brand {
+  font-family: var(--display); font-size: 26px; letter-spacing: -0.02em; margin: 0;
+  display: flex; align-items: center; gap: 11px;
+}
 .brand span { color: var(--pink); }
+/* The mark is optically heavier than the cap-height beside it, so it sits a
+   touch smaller than the type it aligns to rather than matching it exactly. */
+.brand-logo { color: var(--pink); flex: none; }
 .meta { display: flex; gap: 18px; font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
 .meta b { color: var(--fg-dim); font-weight: 400; }
 
@@ -184,6 +190,7 @@ td.heat { background: rgba(255, 0, 122, calc(var(--heat) * 0.22)); }
 /* ── login ────────────────────────────────────────────────────────────── */
 .gate { max-width: 372px; margin: 14vh auto 0; padding: 0 20px; }
 .gate-box { background: var(--panel); box-shadow: 0 0 0 1px var(--line); padding: 28px; }
+.gate-logo { color: var(--pink); display: block; margin: 0 0 16px; }
 .gate h1 { font-family: var(--display); font-size: 22px; margin: 0 0 6px; }
 .gate h1 span { color: var(--pink); }
 .gate-sub { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); margin-bottom: 22px; line-height: 1.6; }
@@ -218,5 +225,7 @@ input:focus { border-color: var(--pink); outline: none; }
           --fg: #000; --fg-dim: #333; --fg-faint: #555; --line: #bbb; --line-hi: #999; }
   body { background: #fff; }
   .controls, .skip, .btn { display: none !important; }
+  /* Keep the mark pink on paper — ink-on-white would lose the brand. */
+  .brand-logo, .gate-logo { color: #FF007A !important; }
   section { break-inside: avoid; }
 }

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
+import { Logo } from './Logo';
 
 /**
  * The one operator login. There is deliberately no sign-up, no magic link and
@@ -33,6 +34,7 @@ export function Login() {
   return (
     <div className="gate">
       <div className="gate-box">
+        <Logo size={44} className="gate-logo" />
         <h1>
           MATCH<span>POD</span>
         </h1>

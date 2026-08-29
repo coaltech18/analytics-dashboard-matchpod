@@ -5,6 +5,7 @@ import { num, pct } from '../lib/format';
 import { SERIES, type MetricsPayload, type SeriesKey } from '../lib/types';
 import { MetricGrid, FunnelBars, ActivityStack, CohortTable } from './Metrics';
 import { Chart } from './Chart';
+import { Logo } from './Logo';
 
 type Status = 'READING' | 'LIVE' | 'PARTIAL' | 'DENIED' | 'ERROR' | 'OFFLINE';
 
@@ -99,7 +100,10 @@ export function Dashboard() {
       <div className="wrap">
         <header className="top">
           <div>
-            <h1 className="brand">MATCH<span>POD</span> METRICS</h1>
+            <h1 className="brand">
+              <Logo size={30} className="brand-logo" />
+              MATCH<span>POD</span> METRICS
+            </h1>
             <div className="meta" style={{ marginTop: 8 }}>
               <span>STATUS <b>{status}</b></span>
               {data?.generatedAt && (
