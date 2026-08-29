@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<title>MatchPod Metrics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!--
+  MatchPod metrics — single-operator dashboard.
+
+  Design: Tactical Telemetry (industrial-brutalist-ui) — rigid grid, 90°
+  corners, monospace telemetry, Archivo Black numerals. Brand colours kept
+  (ink/paper/pink) rather than the archetype's hazard red.
+
+  Accessibility outranks spectacle here: motion is hover/focus only and gated
+  behind prefers-reduced-motion, every colour used for text is measured against
+  WCAG AA (see the token block), charts expose their numbers as real tables,
+  and no meaning is carried by colour alone.
+
+  Reads mp_metrics_* (migration 048) via the `metrics` edge function, which
+  holds the service role key server-side. This page only ever sees aggregate
+  numbers and the public anon key.
+
+  The views and the edge function do NOT live here — they live in the
+  MatchPod app repo. See CLAUDE.md and README.md next to this file.
+-->
+
+<script>
+  // ── CONFIG — fill in before deploying ──────────────────────────────────────
+  // Both values are safe in public source: the anon key is designed to be
+  // public and already ships inside the mobile app binary. It grants nothing
+  // on its own — the metrics views are revoked from `authenticated`, and the
+  // edge function checks your user id against METRICS_ADMIN_IDS.
+  //
+  // POINT THIS AT PRODUCTION for real numbers.
+  window.MP_CONFIG = {
+    SUPABASE_URL: 'https://YOUR-PROJECT-REF.supabase.co',
+    SUPABASE_ANON_KEY: 'YOUR-ANON-KEY',
+  };
+</script>
+
+<style>
+  /* ── tokens ───────────────────────────────────────────────────────────── */
+  :root {
+    --bg:        #0A0A0A;
+    --panel:     #121212;   /* MatchPod --ink */
+    --panel-2:   #171717;
+    --panel-3:   #1E1E1E;
+    --line:      #2A2A2A;
+    --line-hi:   #3D3D3D;
+
+    /* Contrast ratios measured against --panel (#121212); the muted greys are
+       also checked against --panel-2 (#171717) because labels sit on both.
+       Every colour used for text clears WCAG AA (4.5:1).
+       Do not darken these: --fg-faint began at #7C7A76 and measured 4.37 on
+       --panel / 4.19 on --panel-2, failing AA on every metric label. */
+    --fg:        #FAF7F2;   /* 17.5:1 — MatchPod --paper */
+    --fg-dim:    #A8A5A0;   /* 7.6:1  */
+    --fg-faint:  #8C8983;   /* 5.4:1 on --panel, 5.1:1 on --panel-2 */
+
+    --pink:      #FF007A;   /* 4.9:1 — clears AA, but reserved for large
+                               numerals, rules and accents, never body copy */
+    --pink-dim:  rgba(255, 0, 122, 0.14);
+
+    --display: 'Archivo Black', system-ui, sans-serif;
+    --body:    'Space Grotesk', system-ui, sans-serif;
+    --mono:    'Space Mono', ui-monospace, 'Courier New', monospace;
+
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--body);
+    font-size: 16px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Fine grain on the page substrate only. Deliberately BEHIND every panel —
+     panels are opaque, so the measured text-contrast ratios above hold exactly. */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  }
+  body > * { position: relative; z-index: 1; }
+
+  .num, table, .kpi-value, .stat { font-variant-numeric: tabular-nums; }
+
+  /* ── accessibility primitives ─────────────────────────────────────────── */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .skip {
+    position: absolute; left: 8px; top: -60px; z-index: 100;
+    background: var(--pink); color: #0A0A0A; padding: 12px 18px;
+    font-family: var(--mono); font-weight: 700; text-decoration: none;
+    transition: top 0.15s var(--ease);
+  }
+  .skip:focus { top: 8px; }
+  :focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px 90px; }
+
+  /* ── masthead ─────────────────────────────────────────────────────────── */
+  .masthead {
+    display: flex; flex-wrap: wrap; gap: 18px;
+    align-items: flex-end; justify-content: space-between;
+    padding: 34px 0 18px; border-bottom: 2px solid var(--fg);
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(30px, 6vw, 56px);
+    line-height: 0.86; letter-spacing: -0.038em;
+    text-transform: uppercase; margin: 0;
+  }
+  h1 em { font-style: normal; color: var(--pink); }
+  .actions { display: flex; gap: 7px; flex-wrap: wrap; }
+
+  .telemetry {
+    display: flex; flex-wrap: wrap; gap: 4px 22px;
+    padding: 11px 0; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 11.5px;
+    letter-spacing: 0.07em; text-transform: uppercase; color: var(--fg-faint);
+  }
+  .telemetry b { color: var(--fg-dim); font-weight: 400; }
+  .telemetry .live { color: var(--pink); }
+
+  /* ── buttons ──────────────────────────────────────────────────────────── */
+  button {
+    font-family: var(--mono); font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    background: var(--panel); color: var(--fg);
+    border: 1px solid var(--line-hi); border-radius: 0;
+    padding: 10px 14px; min-height: 44px; cursor: pointer;
+    transition: background 0.18s var(--ease), border-color 0.18s var(--ease),
+                color 0.18s var(--ease), transform 0.18s var(--ease);
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--fg); background: var(--panel-3); transform: translateY(-1px);
+  }
+  button:active:not(:disabled) { transform: translateY(0); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #0A0A0A; }
+  button.primary { background: var(--pink); border-color: var(--pink); color: #0A0A0A; }
+  button.primary:hover:not(:disabled) { background: #FF3392; border-color: #FF3392; }
+  button.sm { min-height: 34px; padding: 7px 11px; font-size: 10.5px; }
+
+  h2 {
+    font-family: var(--mono); font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.16em;
+    color: var(--fg-dim); margin: 46px 0 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  h2::before { content: '['; color: var(--pink); }
+  h2::after { content: ']'; color: var(--pink); margin-right: auto; }
+
+  /* ── hairline grid ────────────────────────────────────────────────────── */
+  /* Rules come from a 1px ring per cell, not the container showing through the
+     gap: auto-fit leaves the last row partly empty whenever the cell count is
+     not a multiple of the column count, and a container painted in --line
+     turns that remainder into a large grey slab. */
+  .grid { display: grid; gap: 1px; background: var(--panel); border: 1px solid var(--line); }
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); }
+
+  .kpi {
+    background: var(--panel); padding: 16px 17px 18px;
+    display: flex; flex-direction: column; gap: 8px;
+    position: relative; box-shadow: 0 0 0 1px var(--line);
+    transition: background 0.2s var(--ease);
+  }
+  .kpi:hover { background: var(--panel-2); }
+  .kpi dt {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--fg-faint); line-height: 1.4; margin: 0;
+  }
+  .kpi dd { margin: 0; }
+  .kpi-value { font-family: var(--display); font-size: 34px; line-height: 0.92; letter-spacing: -0.03em; }
+  .kpi-sub { font-family: var(--mono); font-size: 11px; color: var(--fg-dim); line-height: 1.45; margin-top: 7px; }
+  .kpi.key { background: var(--panel-2); }
+  .kpi.key:hover { background: var(--panel-3); }
+  .kpi.key .kpi-value { color: var(--pink); }
+  .kpi.key::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--pink); }
+  .spark { display: block; width: 100%; height: 26px; margin-top: 9px; }
+
+  /* ── panels ───────────────────────────────────────────────────────────── */
+  .panel { background: var(--panel); border: 1px solid var(--line); }
+  .panel-head {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    justify-content: space-between; padding: 13px 14px; border-bottom: 1px solid var(--line);
+  }
+  .panel-body { padding: 16px 14px; }
+  .series, .ranges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .readout { font-family: var(--mono); font-size: 12px; color: var(--fg-dim); letter-spacing: 0.05em; white-space: nowrap; }
+  .readout b { color: var(--pink); font-size: 15px; }
+
+  .chart-scroll { overflow-x: auto; padding: 16px 14px 6px; }
+  svg.chart { display: block; width: 100%; min-width: 560px; height: 268px; touch-action: pan-y; }
+  .gridline { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
+  .axis { font-family: var(--mono); font-size: 10px; fill: var(--fg-faint); letter-spacing: 0.06em; }
+  .plot { fill: none; stroke: var(--pink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .avg { fill: none; stroke: var(--fg-dim); stroke-width: 1.5; stroke-dasharray: 5 4; opacity: 0.85; }
+  .cursor-line { stroke: var(--fg-dim); stroke-width: 1; stroke-dasharray: 3 3; }
+  .cursor-dot { fill: var(--pink); stroke: var(--panel); stroke-width: 2; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 0 14px 14px;
+            font-family: var(--mono); font-size: 11px; color: var(--fg-dim); }
+  .legend i { display: inline-block; width: 14px; height: 3px; margin-right: 7px; vertical-align: middle; }
+
+  /* funnel + composition */
+  .bars { display: flex; flex-direction: column; gap: 13px; }
+  .bar-row { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; align-items: baseline; }
+  .bar-label { font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+               letter-spacing: 0.09em; color: var(--fg-dim); }
+  .bar-val { font-family: var(--mono); font-size: 12.5px; color: var(--fg); font-weight: 700; }
+  .bar-track { grid-column: 1 / -1; height: 26px; background: var(--panel-3); box-shadow: 0 0 0 1px var(--line); }
+  .bar-fill { height: 100%; background: var(--pink); transition: width 0.5s var(--ease); }
+  .bar-drop { grid-column: 1 / -1; font-family: var(--mono); font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.06em; }
+
+  .stack { display: flex; height: 40px; box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+  .stack span { transition: width 0.5s var(--ease); }
+
+  details.data-table { border-top: 1px solid var(--line); }
+  details.data-table summary {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--fg-dim); padding: 13px 14px;
+    cursor: pointer; min-height: 44px; display: flex; align-items: center;
+  }
+  details.data-table summary:hover { color: var(--fg); }
+
+  /* ── tables ───────────────────────────────────────────────────────────── */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; }
+  caption { text-align: left; padding: 13px 14px; font-family: var(--mono); font-size: 11px;
+            color: var(--fg-faint); letter-spacing: 0.08em; text-transform: uppercase;
+            border-bottom: 1px solid var(--line); }
+  th, td { text-align: right; padding: 11px 14px; font-family: var(--mono); font-size: 12.5px;
+           border-bottom: 1px solid var(--line); white-space: nowrap; }
+  thead th { position: sticky; top: 0; background: var(--panel-2); z-index: 1; color: var(--fg-dim);
+             font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; }
+  th:first-child, td:first-child { text-align: left; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--panel-2); }
+  td.strong { color: var(--fg); font-weight: 700; }
+  /* Retention heat. Colour is a secondary cue only — the number is always
+     present in the same cell, so nothing depends on perceiving the tint. */
+  td.heat { position: relative; }
+  td.heat span { position: relative; z-index: 1; }
+  td.heat::before { content: ''; position: absolute; inset: 3px; background: var(--pink);
+                    opacity: calc(var(--heat) * 0.42); }
+
+  .note { font-size: 13.5px; line-height: 1.65; color: var(--fg-dim); margin: 12px 0 0;
+          max-width: 74ch; border-left: 2px solid var(--line-hi); padding-left: 13px; }
+  .msg { font-family: var(--mono); font-size: 13px; line-height: 1.6; padding: 14px 15px;
+         margin: 16px 0; border: 1px solid var(--pink); border-left-width: 4px;
+         background: var(--pink-dim); color: var(--fg); }
+  .empty { font-family: var(--mono); font-size: 12px; color: var(--fg-faint); padding: 26px 14px; text-align: center; }
+  .hidden { display: none !important; }
+
+  /* ── gate ─────────────────────────────────────────────────────────────── */
+  .gate { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+  .gate-inner { width: 100%; max-width: 372px; }
+  .gate h1 { font-size: clamp(28px, 8vw, 40px); margin-bottom: 10px; }
+  .gate-tag { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.1em;
+              text-transform: uppercase; color: var(--fg-faint); margin: 0 0 26px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-family: var(--mono); font-size: 11px; font-weight: 700;
+                 text-transform: uppercase; letter-spacing: 0.1em; color: var(--fg-dim); margin-bottom: 7px; }
+  .field input { width: 100%; padding: 13px 14px; min-height: 48px; background: var(--panel);
+                 color: var(--fg); border: 1px solid var(--line-hi); border-radius: 0;
+                 font-family: var(--mono); font-size: 15px; }
+  .field input::placeholder { color: var(--fg-faint); }
+  .field input:focus-visible { border-color: var(--pink); }
+  .gate button { width: 100%; padding: 14px; font-size: 13px; }
+  .gate-foot { font-family: var(--mono); font-size: 11px; line-height: 1.7; color: var(--fg-faint);
+               margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; }
+
+  @media (max-width: 640px) {
+    h2 { margin-top: 36px; }
+    .kpis { grid-template-columns: repeat(auto-fit, minmax(142px, 1fr)); }
+    .kpi-value { font-size: 28px; }
+  }
+
+  /* ── print / PDF ──────────────────────────────────────────────────────── */
+  @media print {
+    body { background: #fff; color: #000; }
+    body::before { display: none; }
+    .no-print, .skip { display: none !important; }
+    .wrap { max-width: none; padding: 0; }
+    .masthead { border-bottom: 2px solid #000; }
+    h1, h1 em { color: #000; }
+    h2 { color: #000; margin-top: 22px; }
+    h2::before, h2::after { color: #000; }
+    .panel, .grid, .kpi, .table-scroll, .bar-track { background: #fff; border-color: #999; box-shadow: 0 0 0 1px #999; }
+    .kpi.key .kpi-value, .readout b, .telemetry .live { color: #000; }
+    .kpi dt, .kpi-sub, .note, .telemetry, caption, .bar-label, .bar-drop { color: #333; }
+    thead th { background: #eee; color: #000; }
+    td, th { border-color: #bbb; color: #000; }
+    .panel, .table-scroll, .kpi { break-inside: avoid; }
+    .chart-scroll, .table-scroll { overflow: visible; }
+    table { min-width: 0; }
+    svg.chart { min-width: 0; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to metrics</a>
+
+<!-- ── GATE ──────────────────────────────────────────────────────────────── -->
+<div id="gate" class="gate hidden">
+  <div class="gate-inner">
+    <h1>MATCH<em>POD</em><br>METRICS</h1>
+    <p class="gate-tag">// operator access</p>
+    <form id="gate-form" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="username"
+               placeholder="operator@matchpod.in" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password"
+               autocomplete="current-password" placeholder="••••••••••" required>
+      </div>
+      <button class="primary" type="submit" id="gate-btn">Authenticate</button>
+    </form>
+    <div id="gate-error" class="msg hidden" role="alert"></div>
+    <p class="gate-foot">
+      Single operator account. There is no sign-up — the account is created once
+      in Supabase and its user id is pinned in METRICS_ADMIN_IDS. Any other
+      account that authenticates here receives nothing.
+    </p>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ─────────────────────────────────────────────────────────── -->
+<div id="dash" class="wrap hidden">
+  <header class="masthead">
+    <h1>MATCH<em>POD</em> METRICS</h1>
+    <div class="actions no-print">
+      <button id="refresh" type="button">Refresh</button>
+      <button id="exp-csv" type="button">CSV</button>
+      <button id="exp-png" type="button">PNG</button>
+      <button id="exp-print" type="button">Print</button>
+      <button id="signout" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <div class="telemetry" id="telemetry">
+    <span>STATUS <b class="live" id="t-status">CONNECTING</b></span>
+    <span>UPDATED <b id="t-updated">—</b></span>
+    <span>RANGE <b id="t-range">90D</b></span>
+    <span>SEEDS <b>EXCLUDED</b></span>
+  </div>
+  <p class="sr-only" id="live" aria-live="polite"></p>
+
+  <main id="main">
+    <div id="errors" class="msg hidden" role="alert"></div>
+
+    <h2>Funnel</h2>
+    <dl class="grid kpis" id="funnel"></dl>
+    <div class="panel" style="margin-top:1px">
+      <div class="panel-body bars" id="funnel-bars"></div>
+    </div>
+
+    <h2>Activity</h2>
+    <dl class="grid kpis" id="activity"></dl>
+    <div class="panel" style="margin-top:1px">
+      <div class="panel-body">
+        <div class="stack" id="activity-stack" aria-hidden="true"></div>
+        <div class="legend" id="activity-legend" style="padding:14px 0 0"></div>
+      </div>
+    </div>
+    <p class="note">
+      Activity means the app was brought to the foreground, not that anything
+      was done in it — written at most once every five minutes. The KPI buckets
+      are cumulative (active 30d includes 7d includes 24h); the bar above splits
+      everyone into one band each, so it sums to the whole population.
+    </p>
+
+    <h2>Engagement</h2>
+    <dl class="grid kpis" id="engagement"></dl>
+
+    <h2>Waitlist</h2>
+    <dl class="grid kpis" id="waitlist"></dl>
+
+    <h2>Trend</h2>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="series no-print" id="series" role="group" aria-label="Choose metric to plot"></div>
+        <div class="ranges no-print" id="ranges" role="group" aria-label="Choose time range"></div>
+      </div>
+      <div class="panel-head" style="border-bottom:1px solid var(--line)">
+        <output class="readout" id="readout" for="series"></output>
+        <span class="readout" id="summary"></span>
+      </div>
+      <div class="chart-scroll">
+        <svg id="chart" class="chart" viewBox="0 0 920 268"
+             preserveAspectRatio="none" role="img" aria-labelledby="chart-desc"></svg>
+        <p id="chart-desc" class="sr-only"></p>
+      </div>
+      <div class="legend">
+        <span><i style="background:#FF007A"></i>Daily value</span>
+        <span><i style="background:#A8A5A0"></i>7-day moving average</span>
+      </div>
+      <details class="data-table">
+        <summary>View the plotted values as a table</summary>
+        <div class="table-scroll" id="daily-table" style="border:0"></div>
+      </details>
+    </div>
+
+    <h2>Signup cohorts</h2>
+    <div class="table-scroll" id="cohorts"></div>
+    <p class="note">
+      "Still active" is current retention — of the people who joined that week,
+      how many have opened the app in the last 30 days. This is not day-N
+      retention; see docs/METRICS.md for why that needs a daily snapshot.
+    </p>
+  </main>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const CFG = window.MP_CONFIG;
+const $ = (id) => document.getElementById(id);
+
+if (CFG.SUPABASE_URL.includes('YOUR-PROJECT-REF')) {
+  document.body.innerHTML =
+    '<div class="wrap"><div class="msg" role="alert">Not configured — set ' +
+    'SUPABASE_URL and SUPABASE_ANON_KEY in the CONFIG block at the top of ' +
+    'index.html.</div></div>';
+  throw new Error('unconfigured');
+}
+
+const sb = createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+
+const nf = new Intl.NumberFormat('en-IN');
+const num = (v) => (v === null || v === undefined ? '—' : nf.format(v));
+const pct = (v) => (v === null || v === undefined ? '—' : `${v}%`);
+const dm  = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+let DATA = {};              // last successful payload
+let daily = [];             // full 90-day series
+let range = 90;             // 7 | 30 | 90
+let activeKey = 'signups';
+let activeLabel = 'Signups';
+
+const view = () => daily.slice(Math.max(0, daily.length - range));
+
+// ── KPI cells ──────────────────────────────────────────────────────────────
+/** spec: [label, value, sub?, key?, sparkKey?][] — a label/value pair IS a <dl>. */
+function kpis(el, spec) {
+  el.innerHTML = spec.map(([label, value, sub, key, sparkKey]) => `
+    <div class="kpi${key ? ' key' : ''}">
+      <dt>${label}</dt>
+      <dd>
+        <div class="kpi-value">${value}</div>
+        ${sub ? `<div class="kpi-sub">${sub}</div>` : ''}
+        ${sparkKey ? sparkline(sparkKey) : ''}
+      </dd>
+    </div>`).join('');
+}
+
+/** 30-day sparkline. Decorative: the number it accompanies is right above it. */
+function sparkline(key) {
+  const rows = daily.slice(-30);
+  if (rows.length < 2) return '';
+  const v = rows.map((r) => Number(r[key]) || 0);
+  const max = Math.max(...v, 1), W = 100, H = 26;
+  const pts = v.map((n, i) => `${(i / (v.length - 1)) * W},${H - (n / max) * (H - 3) - 1.5}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <polyline points="${pts}" fill="none" stroke="#FF007A" stroke-width="1.6"
+      vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+}
+
+// ── tables ─────────────────────────────────────────────────────────────────
+function table(el, caption, cols, rows) {
+  if (!rows.length) { el.innerHTML = '<div class="empty">No data yet.</div>'; return; }
+  el.innerHTML = `<table>
+    <caption>${caption}</caption>
+    <thead><tr>${cols.map((c) => `<th scope="col">${c.label}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map((r) => `<tr>${cols.map((c, i) => {
+      if (i === 0) return `<th scope="row" style="font-weight:400;color:var(--fg)">${c.get(r)}</th>`;
+      const heat = c.heat ? c.heat(r) : null;
+      return heat === null
+        ? `<td class="${c.strong ? 'strong' : ''}">${c.get(r)}</td>`
+        : `<td class="heat ${c.strong ? 'strong' : ''}" style="--heat:${heat}"><span>${c.get(r)}</span></td>`;
+    }).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+// ── funnel bars ────────────────────────────────────────────────────────────
+function funnelBars(o) {
+  const steps = [
+    ['Signed up', o.signed_up], ['Started profile', o.started_profile], ['Onboarded', o.onboarded],
+  ].filter(([, v]) => v !== null && v !== undefined);
+  if (!steps.length) { $('funnel-bars').innerHTML = ''; return; }
+  const top = Math.max(steps[0][1], 1);
+
+  $('funnel-bars').innerHTML = steps.map(([label, v], i) => {
+    const prev = i ? steps[i - 1][1] : null;
+    const conv = prev ? Math.round((v / Math.max(prev, 1)) * 1000) / 10 : null;
+    return `<div class="bar-row">
+      <span class="bar-label">${label}</span>
+      <span class="bar-val">${num(v)}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${(v / top) * 100}%"></div></div>
+      ${conv === null ? '' :
+        `<div class="bar-drop">${conv}% of previous step · ${num(prev - v)} lost</div>`}
+    </div>`;
+  }).join('');
+}
+
+// ── activity composition ───────────────────────────────────────────────────
+function activityStack(o) {
+  // Disjoint bands, unlike the cumulative KPI cells above.
+  const bands = [
+    ['Active 7d', o.active_7d, '#FF007A'],
+    ['Dormant 7–30d', o.dormant_7_30d, '#8C8983'],
+    ['Dormant 30d+', o.dormant_30d_plus, '#3D3D3D'],
+  ].filter(([, v]) => typeof v === 'number');
+  const total = bands.reduce((a, [, v]) => a + v, 0);
+  if (!total) { $('activity-stack').innerHTML = ''; $('activity-legend').innerHTML = ''; return; }
+
+  $('activity-stack').innerHTML = bands.map(([, v, c]) =>
+    `<span style="width:${(v / total) * 100}%;background:${c}"></span>`).join('');
+  // Legend carries label + count + share as text, so the bar's colours are
+  // never the only way to read it.
+  $('activity-legend').innerHTML = bands.map(([label, v, c]) =>
+    `<span><i style="background:${c}"></i>${label} — <b style="color:var(--fg)">${num(v)}</b>
+     (${Math.round((v / total) * 1000) / 10}%)</span>`).join('');
+}
+
+// ── trend chart ────────────────────────────────────────────────────────────
+const W = 920, H = 268, PAD_L = 52, PAD_R = 16, PAD_T = 18, PAD_B = 30;
+const px = (i, n) => PAD_L + (n <= 1 ? (W - PAD_L - PAD_R) / 2 : (i / (n - 1)) * (W - PAD_L - PAD_R));
+const py = (v, max) => PAD_T + (H - PAD_T - PAD_B) - (v / max) * (H - PAD_T - PAD_B);
+
+/** Trailing 7-day mean — smooths the daily spikes without hiding them. */
+function movingAvg(v, win = 7) {
+  return v.map((_, i) => {
+    const s = Math.max(0, i - win + 1), slice = v.slice(s, i + 1);
+    return slice.reduce((a, b) => a + b, 0) / slice.length;
+  });
+}
+
+/**
+ * Minimal SVG chart — no charting library.
+ *
+ * Hand-rolled because the need is one series on a time axis. A CDN chart
+ * library would be more to audit, another thing that can go down, and it would
+ * fight the 90°-corner styling the whole way.
+ */
+function drawChart() {
+  const svg = $('chart');
+  const rows = view();
+  if (!rows.length) { svg.innerHTML = ''; return; }
+
+  const vals = rows.map((r) => Number(r[activeKey]) || 0);
+  const avg = movingAvg(vals);
+  const max = Math.max(...vals, 1);          // never divide by zero
+  const n = rows.length;
+
+  let g = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = (max / 4) * i, y = py(v, max);
+    g += `<line class="gridline" x1="${PAD_L}" y1="${y}" x2="${W - PAD_R}" y2="${y}"/>`
+       + `<text class="axis" x="${PAD_L - 9}" y="${y + 3.5}" text-anchor="end">${Math.round(v)}</text>`;
+  }
+
+  const pts = vals.map((v, i) => `${px(i, n)},${py(v, max)}`).join(' ');
+  const avgPts = avg.map((v, i) => `${px(i, n)},${py(v, max)}`).join(' ');
+  const area = `${PAD_L},${py(0, max)} ${pts} ${px(n - 1, n)},${py(0, max)}`;
+
+  const step = Math.max(1, Math.floor((n - 1) / 3));
+  const tickIdx = [...new Set([0, step, step * 2, n - 1])].filter((i) => i < n);
+  const ticks = tickIdx.map((i) => `<text class="axis" x="${px(i, n)}" y="${H - 9}" text-anchor="${
+    i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}">${dm(rows[i].day)}</text>`).join('');
+
+  svg.innerHTML = `<defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF007A" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#FF007A" stop-opacity="0.02"/>
+    </linearGradient></defs>
+    ${g}<polygon points="${area}" fill="url(#fade)"/>
+    <polyline class="avg" points="${avgPts}"/>
+    <polyline class="plot" points="${pts}"/>${ticks}
+    <g id="cursor" aria-hidden="true"></g>`;
+
+  const total = vals.reduce((a, b) => a + b, 0);
+  const peakI = vals.indexOf(Math.max(...vals));
+  $('chart-desc').textContent =
+    `${activeLabel} per day over the last ${n} days. Total ${nf.format(total)}, ` +
+    `peak ${nf.format(vals[peakI])} on ${dm(rows[peakI].day)}, ` +
+    `latest ${nf.format(vals[n - 1])} on ${dm(rows[n - 1].day)}.`;
+  $('summary').innerHTML =
+    `TOTAL <b>${num(total)}</b> · PEAK <b>${num(vals[peakI])}</b> · AVG <b>${num(Math.round(total / n))}</b>`;
+
+  showReadout(n - 1);
+  table($('daily-table'), `${activeLabel} per day, last ${n} days`, [
+    { label: 'Day', get: (r) => dm(r.day) },
+    { label: activeLabel, strong: true, get: (r) => num(r[activeKey]) },
+  ], rows);
+}
+
+function showReadout(i) {
+  const rows = view(), r = rows[i]; if (!r) return;
+  $('readout').innerHTML = `${dm(r.day)} — <b>${num(r[activeKey])}</b> ${activeLabel.toLowerCase()}`;
+}
+
+function moveCursor(i) {
+  const g = $('chart').querySelector('#cursor'); if (!g) return;
+  const rows = view(); if (!rows.length) return;
+  const vals = rows.map((r) => Number(r[activeKey]) || 0);
+  const max = Math.max(...vals, 1);
+  const x = px(i, rows.length), y = py(vals[i], max);
+  g.innerHTML = `<line class="cursor-line" x1="${x}" y1="${PAD_T}" x2="${x}" y2="${H - PAD_B}"/>
+                 <circle class="cursor-dot" cx="${x}" cy="${y}" r="4.5"/>`;
+  showReadout(i);
+}
+
+$('chart').addEventListener('pointermove', (e) => {
+  const rows = view(); if (!rows.length) return;
+  const box = e.currentTarget.getBoundingClientRect();
+  const rel = ((e.clientX - box.left) / box.width) * W;      // to viewBox units
+  const i = Math.round(((rel - PAD_L) / (W - PAD_L - PAD_R)) * (rows.length - 1));
+  if (i >= 0 && i < rows.length) moveCursor(i);
+});
+$('chart').addEventListener('pointerleave', () => {
+  const rows = view(); if (rows.length) moveCursor(rows.length - 1);
+});
+
+// ── controls ───────────────────────────────────────────────────────────────
+const SERIES = [
+  ['signups', 'Signups'], ['onboardings', 'Onboardings'],
+  ['active_swipers', 'Active swipers'], ['swipes', 'Swipes'],
+  ['matches', 'Matches'], ['messages', 'Messages'],
+];
+$('series').innerHTML = SERIES.map(([k, label], i) =>
+  `<button type="button" class="sm" data-k="${k}" data-label="${label}" aria-pressed="${i === 0}">${label}</button>`
+).join('');
+$('series').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-k]'); if (!b) return;
+  activeKey = b.dataset.k; activeLabel = b.dataset.label;
+  [...$('series').children].forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  drawChart();
+  $('live').textContent = `Now plotting ${activeLabel}.`;
+});
+
+$('ranges').innerHTML = [7, 30, 90].map((d) =>
+  `<button type="button" class="sm" data-r="${d}" aria-pressed="${d === 90}">${d}D</button>`).join('');
+$('ranges').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-r]'); if (!b) return;
+  range = Number(b.dataset.r);
+  [...$('ranges').children].forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  $('t-range').textContent = `${range}D`;
+  drawChart();
+  $('live').textContent = `Range set to ${range} days.`;
+});
+
+// ── export ─────────────────────────────────────────────────────────────────
+const stamp = () => new Date().toISOString().slice(0, 10);
+
+function download(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  // Revoke on the next frame — revoking synchronously can cancel the download
+  // in some browsers before it has read the blob.
+  requestAnimationFrame(() => URL.revokeObjectURL(url));
+}
+
+/** RFC 4180: wrap in quotes when the value holds a comma, quote or newline. */
+const csvCell = (v) => {
+  const s = v === null || v === undefined ? '' : String(v);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+const csvRows = (rows) => rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
+
+function exportCsv() {
+  const o = DATA.overview ?? {}, e = DATA.engagement ?? {}, a = DATA.activity ?? {};
+  const parts = [];
+
+  parts.push(csvRows([['MatchPod metrics'], ['Generated', DATA.generatedAt ?? ''], ['Seeds', 'excluded']]));
+
+  const flat = { ...o, ...a, ...e };
+  parts.push('\r\n' + csvRows([['# OVERVIEW'], ['Metric', 'Value'],
+    ...Object.entries(flat).map(([k, v]) => [k, v])]));
+
+  if (DATA.daily?.length) {
+    const cols = Object.keys(DATA.daily[0]);
+    parts.push('\r\n' + csvRows([['# DAILY'], cols, ...DATA.daily.map((r) => cols.map((c) => r[c]))]));
+  }
+  if (DATA.cohorts?.length) {
+    const cols = Object.keys(DATA.cohorts[0]);
+    parts.push('\r\n' + csvRows([['# COHORTS'], cols, ...DATA.cohorts.map((r) => cols.map((c) => r[c]))]));
+  }
+
+  // BOM so Excel opens UTF-8 correctly instead of mangling the — and · glyphs.
+  download(new Blob(['﻿' + parts.join('\r\n')], { type: 'text/csv;charset=utf-8' }),
+    `matchpod-metrics-${stamp()}.csv`);
+  $('live').textContent = 'CSV exported.';
+}
+
+/**
+ * Chart → PNG.
+ *
+ * The live SVG is styled by the page stylesheet, and none of that follows the
+ * node once it is serialised into an <img>. So the clone gets an explicit
+ * <style> block with the resolved colours baked in, plus a solid background
+ * rect — otherwise the export is transparent and invisible in most viewers.
+ */
+function exportPng() {
+  const src = $('chart');
+  const clone = src.cloneNode(true);
+  clone.querySelector('#cursor')?.remove();
+  clone.setAttribute('width', W * 2);
+  clone.setAttribute('height', H * 2);
+  clone.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+  const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+  style.textContent = `
+    .gridline{stroke:#2A2A2A;stroke-width:1}
+    .axis{font-family:'Space Mono',monospace;font-size:10px;fill:#8C8983}
+    .plot{fill:none;stroke:#FF007A;stroke-width:2;stroke-linejoin:round}
+    .avg{fill:none;stroke:#A8A5A0;stroke-width:1.5;stroke-dasharray:5 4}`;
+  clone.insertBefore(style, clone.firstChild);
+
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', W); bg.setAttribute('height', H); bg.setAttribute('fill', '#121212');
+  clone.insertBefore(bg, style.nextSibling);
+
+  const svgText = new XMLSerializer().serializeToString(clone);
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = W * 2; c.height = H * 2;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#121212'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    c.toBlob((blob) => {
+      if (!blob) { fail('PNG export failed — the canvas produced no image.'); return; }
+      download(blob, `matchpod-${activeKey}-${range}d-${stamp()}.png`);
+      $('live').textContent = 'Chart exported as PNG.';
+    }, 'image/png');
+  };
+  img.onerror = () => fail('PNG export failed — could not rasterise the chart.');
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
+}
+
+$('exp-csv').addEventListener('click', exportCsv);
+$('exp-png').addEventListener('click', exportPng);
+$('exp-print').addEventListener('click', () => window.print());
+// Collapsed <details> print as a closed summary; open them so the PDF carries
+// the numbers behind the chart too.
+window.addEventListener('beforeprint', () =>
+  document.querySelectorAll('details').forEach((d) => { d.dataset.was = d.open; d.open = true; }));
+window.addEventListener('afterprint', () =>
+  document.querySelectorAll('details').forEach((d) => { d.open = d.dataset.was === 'true'; }));
+
+// ── load ───────────────────────────────────────────────────────────────────
+async function load() {
+  $('refresh').disabled = true;
+  $('t-status').textContent = 'READING';
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { $('refresh').disabled = false; return showGate(); }
+
+  let res, body;
+  try {
+    res = await fetch(`${CFG.SUPABASE_URL}/functions/v1/metrics`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    body = await res.json();
+  } catch (err) {
+    $('t-status').textContent = 'OFFLINE';
+    fail(`Could not reach the metrics function: ${err}`);
+    $('refresh').disabled = false; return;
+  }
+  $('refresh').disabled = false;
+
+  if (!res.ok) {
+    $('t-status').textContent = res.status === 404 ? 'DENIED' : 'ERROR';
+    return fail(res.status === 404
+      ? 'This account is not on the metrics allowlist. Add its user id to METRICS_ADMIN_IDS.'
+      : `${res.status} — ${body?.error ?? 'unknown error'}`);
+  }
+
+  if (body.errors) {
+    fail('Some views failed — is migration 048 applied? ' +
+      Object.entries(body.errors).map(([k, v]) => `${k}: ${v}`).join(' · '));
+  } else {
+    $('errors').classList.add('hidden');
+  }
+
+  DATA = body;
+  daily = body.daily ?? [];
+  const o = body.overview ?? {}, a = body.activity ?? {}, e = body.engagement ?? {};
+
+  kpis($('funnel'), [
+    ['Signed up', num(o.signed_up), 'auth accounts', false, 'signups'],
+    ['Started profile', num(o.started_profile)],
+    ['Onboarded', num(o.onboarded), null, true, 'onboardings'],
+    ['Deactivated', num(o.deactivated)],
+  ]);
+  funnelBars(o);
+
+  kpis($('activity'), [
+    ['Active 24h', num(o.active_24h)],
+    ['Active 7d', num(o.active_7d), `${pct(o.active_7d_pct)} of onboarded`, true, 'active_swipers'],
+    ['Active 30d', num(o.active_30d)],
+    ['Dormant 7–30d', num(o.dormant_7_30d)],
+    ['Dormant 30d+', num(o.dormant_30d_plus)],
+    ['Never returned', num(o.never_returned), 'signed up, no second day'],
+    ['last_seen unknown', num(a.last_seen_unknown), 'expect 0'],
+  ]);
+  activityStack(o);
+
+  kpis($('engagement'), [
+    ['Swipes 7d', num(o.swipes_7d), null, false, 'swipes'],
+    ['Swipers 7d', num(o.swipers_7d), 'distinct users'],
+    ['Like rate', pct(o.like_rate_pct)],
+    ['Matches', num(o.matches_total), `${num(e.matches_7d)} in last 7d`, true, 'matches'],
+    ['Match rate', pct(o.match_rate_pct), 'of likes sent'],
+    ['Messages 7d', num(o.messages_7d), null, false, 'messages'],
+    ['Two-way chats', num(o.two_way_conversations), 'both people spoke', true],
+    ['Msgs per chat', num(e.avg_messages_per_chat), 'average'],
+  ]);
+
+  kpis($('waitlist'), [
+    ['Waitlisted', num(o.waitlisted)],
+    ['Cap', num(o.cap)],
+    ['Spots left', num(o.spots_left)],
+    ['Gate', o.gate_open ? 'OPEN' : 'CLOSED', null, !!o.gate_open],
+  ]);
+
+  drawChart();
+
+  table($('cohorts'), 'Signup cohorts by week', [
+    { label: 'Week', get: (r) => new Date(r.cohort_week).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) },
+    { label: 'Signed up', strong: true, get: (r) => num(r.signed_up) },
+    { label: 'Onboarded', strong: true, get: (r) => num(r.onboarded) },
+    { label: 'Onboarded %', get: (r) => pct(r.onboarded_pct) },
+    { label: 'Active 7d', get: (r) => num(r.active_last_7d) },
+    { label: 'Active 30d', get: (r) => num(r.active_last_30d) },
+    { label: 'Still active %', strong: true, get: (r) => pct(r.still_active_pct),
+      heat: (r) => Math.min(1, (Number(r.still_active_pct) || 0) / 100) },
+  ], body.cohorts ?? []);
+
+  $('t-status').textContent = body.errors ? 'PARTIAL' : 'LIVE';
+  $('t-updated').textContent = new Date(body.generatedAt).toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  }).toUpperCase();
+}
+
+function fail(text) { $('errors').textContent = text; $('errors').classList.remove('hidden'); }
+
+function showGate() { $('gate').classList.remove('hidden'); $('dash').classList.add('hidden'); $('email').focus(); }
+function showDash() { $('gate').classList.add('hidden'); $('dash').classList.remove('hidden'); load(); }
+
+$('gate-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  $('gate-btn').disabled = true; $('gate-btn').textContent = 'Authenticating…';
+  $('gate-error').classList.add('hidden');
+
+  const { error } = await sb.auth.signInWithPassword({
+    email: $('email').value.trim(), password: $('password').value,
+  });
+
+  $('gate-btn').disabled = false; $('gate-btn').textContent = 'Authenticate';
+  if (error) {
+    $('gate-error').textContent = error.message;
+    $('gate-error').classList.remove('hidden');
+    $('password').focus(); return;
+  }
+  showDash();
+});
+
+$('refresh').addEventListener('click', load);
+$('signout').addEventListener('click', async () => { await sb.auth.signOut(); showGate(); });
+
+const { data: { session } } = await sb.auth.getSession();
+session ? showDash() : showGate();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Agent tooling — local, reinstallable, not project code
+.claude/
+.agents/
+skills-lock.json
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# There is no build step. Nothing here should ever be generated.
+node_modules/
