@@ -159,6 +159,35 @@ Note that brand ink `#252525` and this page's `--panel` `#121212` differ on
 purpose — see `brand/README.md` for why lightening the panel would break the
 measured contrast ratios.
 
+## Pages
+
+Seven sections, one concern each, listed in `src/lib/router.ts`. Adding a page
+means adding an entry there and a component in `src/pages.tsx` — the nav and
+the view map are both driven off that array, so they cannot drift apart.
+
+**Routing is hash-based on purpose.** Path routing (`/activity`) on static
+hosting needs a server rewrite, or a refresh and a pasted link 404. That would
+mean an `.htaccess` uploaded separately from `dist/` and easy to forget. A hash
+never reaches the server. Do not "upgrade" this to react-router without also
+shipping the rewrite rule.
+
+**The shell fetches once.** `Dashboard.tsx` loads the payload and hands it to
+whichever page is open; pages never fetch for themselves. Seven self-loading
+pages would be seven times the load on the function for identical data, and
+would flash a spinner on every section change.
+
+Two things a multi-page shell must keep:
+
+- **Focus moves to `<main>` on navigation.** Otherwise a keyboard or
+  screen-reader user stays parked on the nav link and is never told the content
+  changed. `<main>` is `tabIndex={-1}` so this is possible without making it a
+  tab stop.
+- **The active nav item is a bar plus a weight change plus `aria-current`**, not
+  colour alone.
+
+Every page carries one honest sentence about what its numbers are worth. That
+is the point of splitting them up — `docs/METRICS.md` has the full version.
+
 ## Charts
 
 Chart colour lives in `src/lib/viz.ts` and nowhere else. Every ramp there was

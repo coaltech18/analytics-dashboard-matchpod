@@ -117,17 +117,23 @@ index.html          Vite entry
 src/
   main.tsx          mounts App
   App.tsx           session gate: login or dashboard
+  pages.tsx         the seven sections
   components/
     Login.tsx       the one operator login
-    Dashboard.tsx   sections, controls, data loading
+    Dashboard.tsx   shell: fetches once, renders the active page
+    Nav.tsx         section sidebar
     Chart.tsx       trend chart, PNG export, accessible data table
-    Metrics.tsx     metric cells, funnel bars, activity bar, cohorts
+    Metrics.tsx     metric cells, funnel bars, cohort heatmap
+    Donut.tsx       part-to-whole for the activity bands
+    Logo.tsx        the house mark, inlined
   lib/
     supabase.ts     client + the one fetch to the metrics function
     types.ts        payload shape, every field nullable
     csv.ts          CSV export: RFC 4180 + UTF-8 BOM
     format.ts       number/date formatting, download helper
     mock.ts         dev-only fake data
+    router.ts       hash routing + the page list
+    viz.ts          validated chart ramps
 sql/                the views — run once in the SQL editor
 supabase/functions/ the edge function
 docs/METRICS.md     what each number is honestly worth

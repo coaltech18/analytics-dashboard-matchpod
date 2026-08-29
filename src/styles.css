@@ -57,32 +57,102 @@ body {
 /* Nothing here is round. */
 button, input, .cell, .panel { border-radius: 0; }
 
-.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 72px; }
-
-/* ── skip link ─────────────────────────────────────────────────────────── */
+/* ── skip link ───────────────────────────────────────────────────────────
+   Off-screen until focused. Ink on pink (4.94:1) like every other pink
+   surface — white here measured 2.11:1. */
 .skip {
-  position: absolute; left: -9999px; top: 0; z-index: 10;
-  background: var(--pink); color: var(--on-pink); padding: 11px 16px; font-weight: 700;
-  font-family: var(--mono); font-size: var(--fs-lead);
+  position: absolute; left: -9999px; top: 0; z-index: 20;
+  background: var(--pink); color: var(--on-pink); padding: 11px 16px;
+  font-family: var(--mono); font-size: var(--fs-lead); font-weight: 700;
 }
 .skip:focus { left: 0; }
 
-/* ── header ───────────────────────────────────────────────────────────── */
-.top {
-  display: flex; flex-wrap: wrap; gap: 16px;
-  align-items: flex-end; justify-content: space-between;
-  padding-bottom: 18px; border-bottom: 2px solid var(--pink); margin-bottom: 26px;
+/* ── shell: sidebar + content ─────────────────────────────────────────────
+   Grid rather than a fixed-position sidebar: the nav then scrolls with its own
+   overflow instead of the page, and the content column gets a real width to
+   lay out against. */
+.shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+
+.nav {
+  background: var(--panel); box-shadow: inset -1px 0 0 var(--line);
+  padding: 22px 0 18px; display: flex; flex-direction: column; gap: 20px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
-.brand {
-  font-family: var(--display); font-size: 26px; letter-spacing: -0.02em; margin: 0;
-  display: flex; align-items: center; gap: 11px;
+.nav-brand {
+  display: flex; align-items: center; gap: 10px; padding: 0 18px;
+  font-family: var(--display); font-size: 17px; letter-spacing: -0.01em;
 }
-.brand span { color: var(--pink); }
-/* The mark is optically heavier than the cap-height beside it, so it sits a
-   touch smaller than the type it aligns to rather than matching it exactly. */
-.brand-logo { color: var(--pink); flex: none; }
-.meta { display: flex; gap: 18px; font-family: var(--mono); font-size: var(--fs-body); color: var(--fg-faint); }
-.meta b { color: var(--fg-dim); font-weight: 400; }
+.nav-brand .np { color: var(--pink); }
+.nav-list { list-style: none; margin: 0; padding: 0; flex: 1; }
+.nav-item {
+  display: block; padding: 10px 18px; text-decoration: none;
+  border-left: 3px solid transparent;
+}
+.nav-item:hover { background: var(--panel-2); }
+/* Active state is a bar + a weight change + aria-current, never colour alone. */
+.nav-item.on { background: var(--panel-2); border-left-color: var(--pink); }
+.ni-label {
+  display: block; font-family: var(--mono); font-size: var(--fs-body);
+  color: var(--fg-dim); letter-spacing: 0.04em;
+}
+.nav-item.on .ni-label { color: var(--fg); font-weight: 700; }
+.ni-blurb {
+  display: block; font-family: var(--mono); font-size: var(--fs-label);
+  color: var(--fg-faint); margin-top: 2px;
+}
+.nav-signout { margin: 0 18px; }
+
+.body { min-width: 0; display: flex; flex-direction: column; }
+.bar {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+  justify-content: space-between; padding: 14px 26px;
+  border-bottom: 1px solid var(--line); position: sticky; top: 0;
+  background: var(--bg); z-index: 5;
+}
+.bar-meta {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: var(--fs-label); color: var(--fg-faint);
+}
+.bar-meta b { color: var(--fg-dim); font-weight: 400; }
+
+main { padding: 26px; flex: 1; }
+main:focus { outline: none; }
+main:focus-visible { outline: 2px solid var(--pink); outline-offset: -2px; }
+
+.page-head { margin-bottom: 22px; }
+.page-head h1 {
+  font-family: var(--display); font-size: 25px; margin: 0 0 7px;
+  letter-spacing: -0.02em;
+}
+.page-head p {
+  margin: 0; font-family: var(--mono); font-size: var(--fs-body);
+  color: var(--fg-dim); line-height: 1.6; max-width: 68ch;
+}
+.sub-head {
+  font-family: var(--mono); font-size: var(--fs-label); font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-dim);
+  margin: 30px 0 12px; padding-bottom: 9px; border-bottom: 1px solid var(--line);
+}
+.page-note {
+  margin: 22px 0 0; padding: 14px 16px; background: var(--panel-2);
+  box-shadow: 0 0 0 1px var(--line);
+  font-family: var(--mono); font-size: var(--fs-body); color: var(--fg-dim);
+  line-height: 1.7; max-width: 78ch;
+}
+.page-note code {
+  font-family: var(--mono); color: var(--fg); background: var(--panel-3);
+  padding: 1px 5px;
+}
+.page-note b { color: var(--fg); }
+
+.filters { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.foot {
+  padding: 16px 26px; border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: var(--fs-label); color: var(--fg-faint);
+  line-height: 1.6;
+}
 
 /* ── buttons ──────────────────────────────────────────────────────────── */
 .btn {
@@ -253,8 +323,27 @@ input:focus { border-color: var(--pink); outline: none; }
 }
 
 /* ── narrow ───────────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+  .nav {
+    position: static; height: auto; box-shadow: inset 0 -1px 0 var(--line);
+    flex-direction: row; align-items: center; gap: 12px;
+    padding: 12px; overflow-x: auto;
+  }
+  .nav-brand { padding: 0 6px 0 4px; flex: none; }
+  .nav-list { display: flex; gap: 4px; flex: 1; }
+  .nav-item {
+    border-left: 0; border-bottom: 3px solid transparent;
+    padding: 7px 12px; white-space: nowrap;
+  }
+  .nav-item.on { border-left-color: transparent; border-bottom-color: var(--pink); }
+  /* The blurbs are helpful in a column and noise in a strip. */
+  .ni-blurb { display: none; }
+  .nav-signout { margin: 0; flex: none; }
+  .bar, main, .foot { padding-left: 14px; padding-right: 14px; }
+}
+
 @media (max-width: 460px) {
-  .wrap { padding: 20px 12px 56px; }
   .grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
   .value { font-size: 27px; }
   .top { align-items: flex-start; }

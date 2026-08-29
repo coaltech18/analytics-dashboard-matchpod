@@ -1,22 +1,32 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchMetrics, supabase, MetricsError } from '../lib/supabase';
 import { exportCsv } from '../lib/csv';
-import { num, pct } from '../lib/format';
-import { SERIES, type MetricsPayload, type SeriesKey } from '../lib/types';
-import { MetricGrid, FunnelBars, CohortTable } from './Metrics';
-import { Donut } from './Donut';
-import { Chart } from './Chart';
-import { Logo } from './Logo';
+import { useHashRoute, PAGES } from '../lib/router';
+import type { MetricsPayload } from '../lib/types';
+import { Nav } from './Nav';
+import { Overview, Funnel, Activity, Engagement, Trends, Cohorts, Waitlist } from '../pages';
 
 type Status = 'READING' | 'LIVE' | 'PARTIAL' | 'DENIED' | 'ERROR' | 'OFFLINE';
 
+const VIEWS = {
+  overview: Overview, funnel: Funnel, activity: Activity, engagement: Engagement,
+  trends: Trends, cohorts: Cohorts, waitlist: Waitlist,
+};
+
+/**
+ * The shell: fetches once, then hands the same payload to whichever page is
+ * open. Pages never fetch for themselves — switching sections should not cost
+ * a round trip or flash a spinner, and seven self-loading pages would be seven
+ * times the load on the function for identical data.
+ */
 export function Dashboard() {
   const [data, setData] = useState<MetricsPayload | null>(null);
   const [status, setStatus] = useState<Status>('READING');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [range, setRange] = useState<7 | 30 | 90>(90);
-  const [series, setSeries] = useState<SeriesKey>('signups');
+  const [page] = useHashRoute();
+  const mainRef = useRef<HTMLElement>(null);
+  const first = useRef(true);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -45,12 +55,17 @@ export function Dashboard() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Collapsed <details> print as a closed summary. Open them so a saved PDF
-  // carries the numbers behind the chart too, then restore.
+  // Changing page swaps the whole main region. Without moving focus, a keyboard
+  // or screen-reader user stays parked on the nav link and is never told the
+  // content changed. Skipped on first render so loading does not steal focus.
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    mainRef.current?.focus();
+  }, [page]);
+
   useEffect(() => {
     const open = () => document.querySelectorAll('details').forEach((d) => {
-      d.dataset['was'] = String(d.open);
-      d.open = true;
+      d.dataset['was'] = String(d.open); d.open = true;
     });
     const restore = () => document.querySelectorAll('details').forEach((d) => {
       d.open = d.dataset['was'] === 'true';
@@ -63,65 +78,30 @@ export function Dashboard() {
     };
   }, []);
 
-  const daily = useMemo(() => data?.daily ?? [], [data]);
-  const windowed = useMemo(
-    () => daily.slice(Math.max(0, daily.length - range)),
-    [daily, range],
-  );
-
-  // A series the database cannot record arrives as all-null. Plotting it would
-  // draw a flat zero line reading "none, every day" — false rather than empty.
-  // Split them out and offer only the ones with data.
-  const available = useMemo(
-    () => SERIES.filter((s) => daily.some((r) => r[s.key] !== null && r[s.key] !== undefined)),
-    [daily],
-  );
-  const unavailable = useMemo(
-    () => SERIES.filter((s) => !available.includes(s)),
-    [available],
-  );
-
-  // If the selected series turns out to be one of the unrecorded ones, fall
-  // back rather than rendering an empty chart.
-  useEffect(() => {
-    if (available.length && !available.some((s) => s.key === series)) {
-      setSeries(available[0]!.key);
-    }
-  }, [available, series]);
-
-  const o = data?.overview;
-  const a = data?.activity;
-  const e = data?.engagement;
-  const seriesLabel = SERIES.find((s) => s.key === series)?.label ?? 'Signups';
+  const View = VIEWS[page];
+  const meta = PAGES.find((p) => p.id === page);
 
   return (
-    <>
-      <a className="skip" href="#main">Skip to metrics</a>
+    <div className="shell">
+      <a className="skip" href="#main">Skip to content</a>
 
-      <div className="wrap">
-        <header className="top">
-          <div>
-            <h1 className="brand">
-              <Logo size={30} className="brand-logo" />
-              MATCH<span>POD</span> METRICS
-            </h1>
-            <div className="meta" style={{ marginTop: 8 }}>
-              <span>STATUS <b>{status}</b></span>
-              {data?.generatedAt && (
-                <span>
-                  UPDATED{' '}
-                  <b>
-                    {new Date(data.generatedAt)
-                      .toLocaleString('en-IN', {
-                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                      })
-                      .toUpperCase()}
-                  </b>
-                </span>
-              )}
-            </div>
+      <Nav page={page} onSignOut={() => void supabase.auth.signOut()} />
+
+      <div className="body">
+        <header className="bar">
+          <div className="bar-meta">
+            <span>STATUS <b>{status}</b></span>
+            {data?.generatedAt && (
+              <span>
+                UPDATED{' '}
+                <b>
+                  {new Date(data.generatedAt).toLocaleString('en-IN', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                  }).toUpperCase()}
+                </b>
+              </span>
+            )}
           </div>
-
           <div className="controls">
             <button className="btn" onClick={() => void load()} disabled={busy}>
               {busy ? 'Reading…' : 'Refresh'}
@@ -130,180 +110,27 @@ export function Dashboard() {
               CSV
             </button>
             <button className="btn" onClick={() => window.print()}>Print</button>
-            <button className="btn" onClick={() => void supabase.auth.signOut()}>Sign out</button>
           </div>
         </header>
 
-        {/* Live region: status changes announce without stealing focus. */}
         <p className="sr-only" role="status" aria-live="polite">
-          {status === 'LIVE' ? 'Metrics loaded.' : `Status ${status}.`}
+          {status === 'LIVE' ? `${meta?.label ?? 'Metrics'} loaded.` : `Status ${status}.`}
         </p>
 
-        {error && (
-          <p className="msg error" role="alert" style={{ marginBottom: 24 }}>
-            {error}
-          </p>
-        )}
+        {error && <p className="msg error" role="alert">{error}</p>}
 
-        <main id="main">
+        {/* tabIndex -1 makes the focus move above possible without turning the
+            region into a tab stop of its own. */}
+        <main id="main" ref={mainRef} tabIndex={-1}>
           {!data && !error && <div className="empty">Reading metrics…</div>}
-
-          {o && (
-            <>
-              <section>
-                <div className="sec-head">
-                  <h2>Funnel</h2>
-                  <span className="sec-note">auth account → profile → onboarded</span>
-                </div>
-                <MetricGrid
-                  daily={daily}
-                  cells={[
-                    { label: 'Signed up', value: num(o.signed_up), sub: 'auth accounts', spark: 'signups' },
-                    { label: 'Started profile', value: num(o.started_profile) },
-                    { label: 'Onboarded', value: num(o.onboarded), key: true, spark: 'onboardings' },
-                    { label: 'Deactivated', value: num(o.deactivated) },
-                  ]}
-                />
-                <FunnelBars o={o} />
-              </section>
-
-              <section>
-                <div className="sec-head">
-                  <h2>Activity &amp; dormancy</h2>
-                  <span className="sec-note">
-                    &ldquo;active&rdquo; means opened the app, not used it
-                  </span>
-                </div>
-                <MetricGrid
-                  daily={daily}
-                  cells={[
-                    { label: 'Active 24h', value: num(o.active_24h) },
-                    {
-                      label: 'Active 7d',
-                      value: num(o.active_7d),
-                      sub: `${pct(o.active_7d_pct)} of onboarded`,
-                      key: true,
-                      spark: 'active_swipers',
-                    },
-                    { label: 'Active 30d', value: num(o.active_30d) },
-                    { label: 'Dormant 7–30d', value: num(o.dormant_7_30d) },
-                    { label: 'Dormant 30d+', value: num(o.dormant_30d_plus) },
-                    { label: 'Never returned', value: num(o.never_returned), sub: 'signed up, no second day' },
-                    { label: 'last_seen unknown', value: num(a?.last_seen_unknown), sub: 'expect 0' },
-                  ]}
-                />
-                <Donut
-                  centreLabel="profiles"
-                  centreValue={num(
-                    (o.active_7d ?? 0) + (o.dormant_7_30d ?? 0) + (o.dormant_30d_plus ?? 0),
-                  )}
-                  slices={[
-                    { label: 'Active 7d', value: o.active_7d ?? 0 },
-                    { label: 'Dormant 7–30d', value: o.dormant_7_30d ?? 0 },
-                    { label: 'Dormant 30d+', value: o.dormant_30d_plus ?? 0 },
-                  ].filter((s) => s.value > 0)}
-                />
-              </section>
-
-              <section>
-                <div className="sec-head">
-                  <h2>Engagement</h2>
-                </div>
-                <MetricGrid
-                  daily={daily}
-                  cells={[
-                    { label: 'Swipes 7d', value: num(o.swipes_7d), spark: 'swipes' },
-                    { label: 'Swipers 7d', value: num(o.swipers_7d), sub: 'distinct users' },
-                    { label: 'Like rate', value: pct(o.like_rate_pct) },
-                    {
-                      label: 'Matches',
-                      value: num(o.matches_total),
-                      sub: `${num(e?.matches_7d)} in last 7d`,
-                      key: true,
-                      spark: 'matches',
-                    },
-                    { label: 'Match rate', value: pct(o.match_rate_pct), sub: 'of likes sent' },
-                    { label: 'Messages 7d', value: num(o.messages_7d), spark: 'messages' },
-                    { label: 'Two-way chats', value: num(o.two_way_conversations), sub: 'both people spoke', key: true },
-                    { label: 'Msgs per chat', value: num(e?.avg_messages_per_chat), sub: 'average' },
-                  ]}
-                />
-              </section>
-
-              <section>
-                <div className="sec-head">
-                  <h2>Waitlist</h2>
-                </div>
-                <MetricGrid
-                  daily={daily}
-                  cells={[
-                    { label: 'Waitlisted', value: num(o.waitlisted) },
-                    { label: 'Cap', value: num(o.cap) },
-                    { label: 'Spots left', value: num(o.spots_left) },
-                    { label: 'Gate', value: o.gate_open ? 'OPEN' : 'CLOSED', key: !!o.gate_open },
-                  ]}
-                />
-              </section>
-            </>
-          )}
-
-          {daily.length > 0 && (
-            <section>
-              <div className="sec-head">
-                <h2>Trend</h2>
-              </div>
-
-              <div className="controls" style={{ marginBottom: 12 }}>
-                {available.map((s) => (
-                  <button
-                    key={s.key}
-                    className="btn"
-                    aria-pressed={series === s.key}
-                    onClick={() => setSeries(s.key)}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-
-              {unavailable.length > 0 && (
-                <p className="msg" style={{ marginBottom: 12 }}>
-                  Not recorded by this database:{' '}
-                  <b style={{ color: 'var(--fg)' }}>
-                    {unavailable.map((s) => s.label).join(', ')}
-                  </b>
-                  . Shown as absent rather than zero — see docs/METRICS.md.
-                </p>
-              )}
-
-              <div className="controls" style={{ marginBottom: 12 }}>
-                {([7, 30, 90] as const).map((r) => (
-                  <button
-                    key={r}
-                    className="btn"
-                    aria-pressed={range === r}
-                    onClick={() => setRange(r)}
-                  >
-                    {r}D
-                  </button>
-                ))}
-              </div>
-
-              <Chart rows={windowed} seriesKey={series} seriesLabel={seriesLabel} range={range} />
-            </section>
-          )}
-
-          {data?.cohorts && (
-            <section>
-              <div className="sec-head">
-                <h2>Cohorts</h2>
-                <span className="sec-note">retention is current, not day-N</span>
-              </div>
-              <CohortTable rows={data.cohorts} />
-            </section>
-          )}
+          {data && <View data={data} />}
         </main>
+
+        <footer className="foot">
+          Seeded demo profiles are excluded from every figure. CSV exports every
+          section, not just this page.
+        </footer>
       </div>
-    </>
+    </div>
   );
 }
