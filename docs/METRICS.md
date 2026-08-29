@@ -1,7 +1,7 @@
 # Metrics
 
-Every product number in one place. Migration `048_metrics_views.sql` adds five
-views; this is how to read them.
+Every product number in one place. `sql/metrics_views.sql` adds five views;
+this is how to read them.
 
 They are **service-role only** — revoked from `anon` and `authenticated`, same
 as `podder_stats` and `onboarding_funnel`. That means the Supabase SQL editor
@@ -167,7 +167,7 @@ under the disclosure, because a `<polyline>` tells a screen reader nothing.
 | "not configured" | `MP_CONFIG` still has the placeholder values |
 | "not on the metrics allowlist" | your user id is not in `METRICS_ADMIN_IDS` |
 | "Dashboard not configured" (503) | `METRICS_ADMIN_IDS` secret was never set |
-| "Some views failed" | migration 048 is not applied to that project |
+| "Some views failed" | `sql/metrics_views.sql` was never run on that project |
 | CORS error in the console | the origin is not in `METRICS_ALLOWED_ORIGINS` |
 
 ## Not building a page after all?
