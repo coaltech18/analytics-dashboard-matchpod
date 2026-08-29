@@ -63,6 +63,18 @@ Standalone means standalone from the app **codebase**, not from its
 **database**. These views read `profiles`, `swipes`, `matches`, `messages`,
 `analytics_events` and `app_config` — that is where the numbers are.
 
+**The app repo does not hold copies of any of this, and must not again.** It
+briefly did, before this repo became standalone. Those copies were deleted on
+2026-08-29 once they had drifted: the app repo's `functions/metrics/index.ts`
+still had `metrics.matchpod.in` in `DEFAULT_ORIGINS` and still queried
+`analytics_events`. A `supabase functions deploy metrics` from there would have
+overwritten production with that older version and broken the live dashboard —
+silently, since a deploy reports success either way.
+
+Production's function is deployed from **here**, with an explicit
+`--project-ref`. If you ever find `metrics` under the app repo's
+`supabase/functions/` again, it is a stale copy: delete it, do not merge it.
+
 ## The data flow
 
 ```
