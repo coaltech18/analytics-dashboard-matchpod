@@ -1,9 +1,20 @@
 # MatchPod Analytics Dashboard
 
-A single self-contained `index.html`. No build step, no framework, no
-dependencies, no bundler. Open it, edit it, deploy it.
+Two frontends, one backend. Deploy one frontend, not both.
 
-It is the **frontend only**. It reads numbers from the MatchPod Supabase project
+- `index.html` — a single self-contained file. No build step, no framework, no
+  bundler. Open it, edit it, deploy it.
+- `app/` — React 18 + TypeScript + Vite, added later on request. Same metrics,
+  same design system, same backend, same exports.
+
+They are duplicates on purpose but not forever: a change made in one and not
+the other is a bug waiting to be believed. When you pick a winner, delete the
+loser rather than letting them drift.
+
+Everything below about security, contrast, the chart and the exports applies to
+**both** — the React port carries the same rules and the same comments.
+
+The frontend is the frontend only. It reads numbers from the MatchPod Supabase project
 over HTTPS and renders them.
 
 ---

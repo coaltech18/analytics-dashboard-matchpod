@@ -1,0 +1,222 @@
+/* Tactical Telemetry — 90° corners, hairline rules, Archivo Black numerals.
+   Ported from the original single-file dashboard; the contrast ratios in the
+   token block are measured, not guessed. Read CLAUDE.md before changing one. */
+
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg:        #0A0A0A;
+  --panel:     #121212;   /* MatchPod --ink */
+  --panel-2:   #171717;
+  --panel-3:   #1E1E1E;
+  --line:      #2A2A2A;
+  --line-hi:   #3D3D3D;
+
+  /* Contrast measured against --panel (#121212); the muted greys are also
+     checked against --panel-2 (#171717) because labels sit on both. Every
+     colour used for text clears WCAG AA (4.5:1). Do not darken these:
+     --fg-faint began at #7C7A76 and measured 4.37 on --panel / 4.19 on
+     --panel-2, failing AA on every metric label. */
+  --fg:        #FAF7F2;   /* 17.5:1 — MatchPod --paper */
+  --fg-dim:    #A8A5A0;   /* 7.6:1  */
+  --fg-faint:  #8C8983;   /* 5.4:1 on --panel, 5.1:1 on --panel-2 */
+
+  --pink:      #FF007A;   /* 4.9:1 — large numerals, rules and accents only,
+                             never body copy: tiring at 11px */
+  --pink-dim:  rgba(255, 0, 122, 0.14);
+
+  --display: 'Archivo Black', system-ui, sans-serif;
+  --body:    'Space Grotesk', system-ui, sans-serif;
+  --mono:    'Space Mono', ui-monospace, 'Courier New', monospace;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Nothing here is round. */
+button, input, .cell, .panel { border-radius: 0; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 72px; }
+
+/* ── skip link ─────────────────────────────────────────────────────────── */
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 10;
+  background: var(--pink); color: #fff; padding: 10px 16px;
+  font-family: var(--mono); font-size: 12px;
+}
+.skip:focus { left: 0; }
+
+/* ── header ───────────────────────────────────────────────────────────── */
+.top {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  align-items: flex-end; justify-content: space-between;
+  padding-bottom: 18px; border-bottom: 2px solid var(--pink); margin-bottom: 26px;
+}
+.brand { font-family: var(--display); font-size: 26px; letter-spacing: -0.02em; margin: 0; }
+.brand span { color: var(--pink); }
+.meta { display: flex; gap: 18px; font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
+.meta b { color: var(--fg-dim); font-weight: 400; }
+
+/* ── buttons ──────────────────────────────────────────────────────────── */
+.btn {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 9px 14px; cursor: pointer;
+  background: var(--panel-2); color: var(--fg-dim);
+  border: 1px solid var(--line-hi);
+  transition: background 120ms var(--ease), color 120ms var(--ease);
+}
+.btn:hover:not(:disabled) { background: var(--panel-3); color: var(--fg); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn[aria-pressed='true'] { background: var(--pink); border-color: var(--pink); color: #fff; }
+.btn-primary {
+  background: var(--pink); border-color: var(--pink); color: #fff;
+  padding: 12px 18px; font-size: 12px; width: 100%;
+}
+.btn-primary:hover:not(:disabled) { background: #E0006B; color: #fff; }
+
+:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ── sections ─────────────────────────────────────────────────────────── */
+section { margin-bottom: 34px; }
+.sec-head {
+  display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px;
+}
+h2 {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-dim); margin: 0;
+}
+.sec-note { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); }
+
+/* ── metric grid ──────────────────────────────────────────────────────────
+   Hairlines are a 1px ring per cell, NOT the container's background showing
+   through gaps. With auto-fit the last row is often partly empty, and a
+   container painted in the line colour turns that remainder into a grey slab. */
+.grid {
+  display: grid; gap: 1px;
+  grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
+  margin: 0;
+}
+.cell {
+  background: var(--panel); padding: 15px 16px 16px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.cell.key { background: var(--panel-2); }
+.cell dt {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--fg-faint); margin-bottom: 9px;
+}
+.cell dd { margin: 0; }
+.value { font-family: var(--display); font-size: 34px; line-height: 1; letter-spacing: -0.02em; }
+.cell.key .value { color: var(--pink); }
+.sub { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); margin-top: 7px; }
+.spark { display: block; width: 100%; height: 26px; margin-top: 10px; }
+
+/* ── funnel bars ──────────────────────────────────────────────────────── */
+.bars { background: var(--panel); box-shadow: 0 0 0 1px var(--line); padding: 18px; margin-top: 1px; }
+.bar-row { margin-bottom: 16px; }
+.bar-row:last-child { margin-bottom: 0; }
+.bar-label { font-family: var(--mono); font-size: 11px; color: var(--fg-dim); }
+.bar-val { font-family: var(--mono); font-size: 11px; color: var(--fg); float: right; }
+.bar-track { height: 8px; background: var(--panel-3); margin: 7px 0 5px; }
+.bar-fill { height: 100%; background: var(--pink); }
+.bar-drop { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); }
+
+/* ── activity composition ─────────────────────────────────────────────── */
+.stack { display: flex; height: 26px; margin-top: 1px; box-shadow: 0 0 0 1px var(--line); }
+.stack span { display: block; }
+.legend {
+  display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px;
+  font-family: var(--mono); font-size: 10px; color: var(--fg-faint);
+}
+.legend i { display: inline-block; width: 9px; height: 9px; margin-right: 6px; }
+.legend b { font-weight: 400; }
+
+/* ── chart ────────────────────────────────────────────────────────────── */
+.chart-panel { background: var(--panel); box-shadow: 0 0 0 1px var(--line); padding: 16px; }
+.chart-panel svg { display: block; width: 100%; height: auto; }
+.chart-summary { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); margin-top: 10px; line-height: 1.6; }
+details { margin-top: 12px; }
+summary {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--fg-dim); cursor: pointer; padding: 6px 0;
+}
+
+/* ── tables ───────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; background: var(--panel); box-shadow: 0 0 0 1px var(--line); }
+table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 11px; }
+caption { text-align: left; padding: 14px 16px 0; color: var(--fg-faint); font-size: 10px; }
+th, td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+thead th {
+  color: var(--fg-faint); font-weight: 400; font-size: 10px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+tbody th { text-align: left; font-weight: 400; color: var(--fg); }
+td.strong { color: var(--fg); }
+td { color: var(--fg-dim); }
+/* Heat tint carries its value as text in the same cell — never colour alone. */
+td.heat { background: rgba(255, 0, 122, calc(var(--heat) * 0.22)); }
+
+/* ── messages ─────────────────────────────────────────────────────────── */
+.msg {
+  background: var(--panel-2); box-shadow: 0 0 0 1px var(--line-hi);
+  padding: 14px 16px; font-family: var(--mono); font-size: 11px;
+  color: var(--fg-dim); line-height: 1.6;
+}
+.msg.error { box-shadow: 0 0 0 1px var(--pink); color: var(--fg); }
+.empty { padding: 22px 16px; font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
+.hidden { display: none; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ── login ────────────────────────────────────────────────────────────── */
+.gate { max-width: 372px; margin: 14vh auto 0; padding: 0 20px; }
+.gate-box { background: var(--panel); box-shadow: 0 0 0 1px var(--line); padding: 28px; }
+.gate h1 { font-family: var(--display); font-size: 22px; margin: 0 0 6px; }
+.gate h1 span { color: var(--pink); }
+.gate-sub { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); margin-bottom: 22px; line-height: 1.6; }
+label {
+  display: block; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-faint); margin-bottom: 6px;
+}
+input {
+  width: 100%; background: var(--bg); border: 1px solid var(--line-hi);
+  color: var(--fg); font-family: var(--mono); font-size: 13px;
+  padding: 11px 12px; margin-bottom: 16px;
+}
+input:focus { border-color: var(--pink); outline: none; }
+
+/* ── motion: minimal, and gated ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ── narrow ───────────────────────────────────────────────────────────── */
+@media (max-width: 460px) {
+  .wrap { padding: 20px 12px 56px; }
+  .grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .value { font-size: 27px; }
+  .top { align-items: flex-start; }
+  .brand { font-size: 21px; }
+}
+
+/* ── print ────────────────────────────────────────────────────────────── */
+@media print {
+  :root { --bg: #fff; --panel: #fff; --panel-2: #fff; --panel-3: #eee;
+          --fg: #000; --fg-dim: #333; --fg-faint: #555; --line: #bbb; --line-hi: #999; }
+  body { background: #fff; }
+  .controls, .skip, .btn { display: none !important; }
+  section { break-inside: avoid; }
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+
+# Every local env file. .env.example is the only one that ships — it holds
+# placeholders, and the built bundle inlines whatever VITE_* vars are set at
+# build time, so a stray .env with real values would end up in dist/.
+.env
+.env.*
+!.env.example
+tsconfig.tsbuildinfo

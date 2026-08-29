@@ -1,7 +1,22 @@
 # MatchPod Analytics Dashboard
 
-Single-operator metrics dashboard. One self-contained `index.html` — no build
-step, no dependencies.
+Single-operator metrics dashboard.
+
+**There are two frontends in this repo, doing the same job against the same
+backend. Deploy one.**
+
+| | `index.html` | `app/` |
+|---|---|---|
+| stack | one file, no build | React 18 + TypeScript + Vite |
+| deploy | upload one file | `npm run build`, upload `dist/` |
+| size | 44 KB | ~110 KB gzipped |
+| dependencies | supabase-js from a CDN | 77 packages |
+
+Both have the same login, the same metrics, the same design system and the same
+exports. The React one is easier to extend; the single file is easier to keep
+alive. Pick whichever you will actually maintain, and delete the other —
+carrying both means every change gets made twice, and the day they drift is the
+day you stop trusting the numbers.
 
 Funnel, activity and dormancy, engagement, waitlist, a 90-day trend chart, and
 signup cohorts. CSV / PNG / PDF export.
