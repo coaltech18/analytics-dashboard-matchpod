@@ -2,7 +2,7 @@
    Ported from the original single-file dashboard; the contrast ratios in the
    token block are measured, not guessed. Read CLAUDE.md before changing one. */
 
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Smooch+Sans:wght@300..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Smooch+Sans:wght@400..800&family=Space+Grotesk:wght@400;500;700&display=swap');
 
 :root {
   --bg:        #0A0A0A;
@@ -17,22 +17,28 @@
      colour used for text clears WCAG AA (4.5:1). Do not darken these:
      --fg-faint began at #7C7A76 and measured 4.37 on --panel / 4.19 on
      --panel-2, failing AA on every metric label. */
-  --fg:        #FAF7F2;   /* 17.5:1 — MatchPod --paper */
-  --fg-dim:    #A8A5A0;   /* 7.6:1  */
-  --fg-faint:  #8C8983;   /* 5.4:1 on --panel, 5.1:1 on --panel-2 */
+  /* Ratios are the WORST of the three surfaces text sits on (--panel #121212,
+     --panel-2 #171717, --panel-3 #1E1E1E), not the most flattering one.
+     All three clear WCAG AAA (7:1) for normal text, not just AA (4.5:1).
+     The previous --fg-faint was #8C8983 at 4.78:1 on --panel-3 — legal, but it
+     blended. Do not darken these back. */
+  --fg:        #FAF7F2;   /* 15.6:1 — MatchPod --paper */
+  --fg-dim:    #C8C5C0;   /*  9.7:1 */
+  --fg-faint:  #B0ADA8;   /*  7.5:1 — was 4.78:1 */
 
   --pink:      #FF007A;   /* 4.9:1 — large numerals, rules and accents only,
                              never body copy: tiring at 11px */
   --pink-dim:  rgba(255, 0, 122, 0.14);
 
-  /* Anton is single-weight (400 only) — asking for 700 gets a synthesised
-     bold, so never set font-weight on display text. Smooch Sans is variable
-     300..800 and carries every weight this page needs. */
-  --display: 'Anton', Impact, system-ui, sans-serif;
-  --body:    'Smooch Sans', system-ui, sans-serif;
-  /* Kept as a separate token so the one place that needs even digit columns
-     can be changed independently — see the tabular-nums note below. */
-  --mono:    'Smooch Sans', system-ui, sans-serif;
+  /* Two faces, split by size rather than by role.
+     Smooch Sans is condensed: it has presence at display sizes and goes weak
+     and narrow at 13px. Space Grotesk holds its shape small, so it takes every
+     label, table, button and body string — which is most of the page.
+     Anton is gone: single-weight, and too heavy-condensed for numbers that sit
+     next to each other in a grid. */
+  --display: 'Smooch Sans', system-ui, sans-serif;   /* page titles + big numerals only */
+  --body:    'Space Grotesk', system-ui, sans-serif; /* everything read at text size */
+  --mono:    'Space Grotesk', system-ui, sans-serif;
 
   /* Text on a pink field. White measures 3.8:1 and FAILS AA at these sizes;
      ink is 4.94:1 and passes. It is also the brand's own ink-on-pink pairing
@@ -54,25 +60,25 @@
 /* Every number on this page sits in a column with other numbers. Proportional
    digits make those columns ragged and make two figures of the same magnitude
    look different lengths, so figures are tabular and lining everywhere. */
-/* Declared for correctness and for whatever face comes next: NEITHER Anton nor
-   Smooch Sans ships a `tnum` feature, so today this is inert. Measured: five
-   digits vary by 27.8px in Anton and 10.8px in Smooch Sans. Number columns are
-   right-aligned so the right edge stays flush, which is what matters for
-   scanning one; if ragged digits ever become a problem, the fix is a face with
-   tabular figures, not more CSS. */
+/* Space Grotesk DOES ship tabular figures, so this is live rather than
+   decorative: measured, five digits vary by 16.73px without it and exactly
+   0.00px with it. That is why the tables and every small number use Space
+   Grotesk. Smooch Sans has no `tnum` (18.5px spread either way), which is fine
+   where it is used — standalone display numerals, never a column. */
 body, table, .value, .bar-val, .dl-value, input {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* Smooch Sans is condensed and light at 400 — noticeably thinner than the
-   monospace it replaced. Small uppercase labels need weight to survive, so the
-   UI text sits at 600 rather than relying on size alone. */
+/* Space Grotesk holds its shape at text sizes, so labels need 500 rather than
+   the 600 the condensed face needed. */
 body { font-weight: 400; }
 .cell dt, thead th, .sec-note, .ni-label, .hs-label, label,
 .sub-head, h2, .bar-label, .btn, caption, summary {
-  font-weight: 600;
+  font-weight: 500;
 }
-.value, .page-head h1, .nav-brand { font-weight: 400; }  /* Anton has one weight */
+/* Smooch Sans is condensed, so display text carries 700 — at 400 a condensed
+   face reads as thin rather than large. */
+.value, .page-head h1, .nav-brand { font-weight: 700; }
 
 body {
   margin: 0;
@@ -90,8 +96,11 @@ button, input, .cell, .panel { border-radius: 0; }
    surface — white here measured 2.11:1. */
 .skip {
   position: absolute; left: -9999px; top: 0; z-index: 20;
-  background: var(--pink); color: var(--on-pink); padding: 11px 16px;
-  font-family: var(--mono); font-size: var(--fs-lead); font-weight: 700;
+  background: var(--pink); color: var(--on-pink); padding: 12px 18px;
+  font-family: var(--body); font-weight: 700;
+  /* 19px at 700 clears the large-text threshold, where this pairing's 4.94:1
+     meets AAA. At 16px it would only reach AA. */
+  font-size: 19px;
 }
 .skip:focus { left: 0; }
 
@@ -108,7 +117,7 @@ button, input, .cell, .panel { border-radius: 0; }
 }
 .nav-brand {
   display: flex; align-items: center; gap: 10px; padding: 0 18px;
-  font-family: var(--display); font-size: 17px; letter-spacing: -0.01em;
+  font-family: var(--display); font-size: 20px; letter-spacing: -0.01em;
 }
 .nav-brand .np { color: var(--pink); }
 .nav-list { list-style: none; margin: 0; padding: 0; flex: 1; }
@@ -192,10 +201,20 @@ main:focus-visible { outline: 2px solid var(--pink); outline-offset: -2px; }
 }
 .btn:hover:not(:disabled) { background: var(--panel-3); color: var(--fg); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn[aria-pressed='true'] { background: var(--pink); border-color: var(--pink); color: var(--on-pink); font-weight: 700; }
+/* Selected state is high-contrast text plus a pink edge, NOT pink fill behind
+   11-15px text. #FF007A tops out near 5:1 on any dark ground, so small text on
+   pink can never reach AAA — while --fg on --panel-3 is 15.6:1. Pink stays as
+   the accent, which is the rule everywhere else on this page. */
+.btn[aria-pressed='true'] {
+  background: var(--panel-3); color: var(--fg); font-weight: 700;
+  border-color: var(--line-hi); border-bottom: 3px solid var(--pink);
+}
 .btn-primary {
   background: var(--pink); border-color: var(--pink); color: var(--on-pink);
-  padding: 13px 18px; font-size: var(--fs-lead); width: 100%; font-weight: 700;
+  padding: 14px 18px; width: 100%; font-weight: 700;
+  /* >=18.66px at 700 counts as large text, where 4.5:1 is the AAA bar and this
+     pairing measures 4.94:1. Below that size it would only reach AA. */
+  font-size: 19px;
 }
 .btn-primary:hover:not(:disabled) { background: #FF2E90; color: var(--on-pink); }
 

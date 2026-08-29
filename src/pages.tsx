@@ -85,7 +85,7 @@ export function Funnel({ data }: PageProps) {
       <FunnelBars o={o} />
       <p className="page-note">
         Seed profiles are excluded everywhere. &ldquo;Deactivated&rdquo; accounts
-        still count as signed up — they were real people who left.
+        still count as signed up. They were real people who left.
       </p>
     </>
   );
@@ -142,7 +142,7 @@ export function Engagement({ data }: PageProps) {
     <>
       <Head
         title="Engagement"
-        note="What people actually do once they are in: swiping, matching, and whether anyone talks."
+        note="What people do once they are in: swiping, matching, and whether anyone talks."
       />
       <MetricGrid
         daily={daily}
@@ -158,9 +158,9 @@ export function Engagement({ data }: PageProps) {
         ]}
       />
       <p className="page-note">
-        <b>Two-way chats is the honest one.</b> A match where nobody speaks is
-        not a conversation, and total matches will always flatter the product
-        compared with how many of them turned into anything.
+        A match where nobody speaks is not a conversation. Total matches will
+        always be the larger number; two-way chats is the one that tracks
+        whether the product works.
       </p>
     </>
   );
@@ -215,8 +215,8 @@ export function Trends({ data }: PageProps) {
       <Chart rows={windowed} seriesKey={active} seriesLabel={label} range={range} />
 
       <p className="page-note">
-        Only ever one measure on the axis. Two measures of different size on one
-        chart would invent a relationship that is not in the data.
+        One measure on the axis at a time. Plotting two of different size
+        together would invent a relationship the data does not contain.
       </p>
     </>
   );
@@ -236,9 +236,9 @@ export function Cohorts({ data }: PageProps) {
         means: of the people who joined that week, how many opened the app in
         the last 30 days. A true day-7 or day-30 curve is impossible from the
         current schema, because <code>last_seen</code> is a single column that
-        gets overwritten — there is no history to reconstruct. Older cohorts
-        have simply had longer to drift away, so read the column downward with
-        that in mind.
+        gets overwritten, leaving no history to reconstruct. Older cohorts have
+        had longer to drift away, so read the column downward with that in
+        mind.
       </p>
     </>
   );
@@ -252,7 +252,7 @@ export function Waitlist({ data }: PageProps) {
 
   return (
     <>
-      <Head title="Waitlist" note="How many are queued, and whether the gate is currently letting people in." />
+      <Head title="Waitlist" note="How many are queued, and whether the gate is letting people in." />
       <MetricGrid
         daily={daily}
         cells={[

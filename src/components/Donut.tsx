@@ -75,13 +75,13 @@ export function Donut({
           <>
             <text
               x={cx} y={cy - 2} textAnchor="middle"
-              fill="#FAF7F2" fontFamily="'Anton', Impact, sans-serif" fontSize="30"
+              fill="#FAF7F2" fontFamily="'Smooch Sans', system-ui, sans-serif" fontSize="30"
             >
               {centreValue}
             </text>
             <text
               x={cx} y={cy + 16} textAnchor="middle"
-              fill="#A8A5A0" fontFamily="'Smooch Sans', system-ui, sans-serif" fontSize="13"
+              fill="#C8C5C0" fontFamily="'Space Grotesk', system-ui, sans-serif" fontSize="13"
             >
               {centreLabel}
             </text>

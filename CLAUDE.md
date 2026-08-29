@@ -123,18 +123,30 @@ on every metric label. Do not darken the greys to make it look moodier.
 caught the pressed range/series buttons, the primary button and the skip link.
 It is also the brand's own ink-on-pink pairing (`brand/logo4`, `logo8`).
 
-**The faces are Anton (display) and Smooch Sans (everything else).** Two
-consequences that are easy to trip over:
+**The faces are Smooch Sans (display) and Space Grotesk (everything else).**
+Split by size, not by role: Smooch Sans is condensed, so it has presence at
+page-title and big-numeral sizes and goes weak at 13px. Space Grotesk holds its
+shape small, so it takes every label, table, button and body string.
 
-- **Anton has one weight.** Setting `font-weight: 700` on display text gets a
-  synthesised bold, which looks smeared. Leave it at 400.
-- **Neither face has tabular figures.** `font-variant-numeric: tabular-nums` is
-  declared and is currently *inert* — measured, five digits vary by 27.8px in
-  Anton and 10.8px in Smooch Sans. Number columns are right-aligned so the right
-  edge stays flush, which is what matters when scanning one. If ragged digits
-  ever become a real problem the answer is a face with `tnum`, not more CSS.
-- Smooch Sans is **condensed and light at 400**. UI labels sit at **600** to
-  survive at small sizes; do not drop them back to 400 to "clean it up".
+- **Space Grotesk has tabular figures and Smooch Sans does not.** Measured: five
+  digits vary by 16.73px without `tabular-nums` and 0.00px with it. That is why
+  every number read in a column uses Space Grotesk. Do not move tables onto the
+  display face.
+- Anton was removed: single weight, and too heavy-condensed for numerals sitting
+  next to each other.
+
+**Contrast targets AAA (7:1), not AA.** The greys are measured against the
+*worst* of the three surfaces text sits on (`--panel`, `--panel-2`,
+`--panel-3`), not the most flattering. `--fg-faint` was `#8C8983` at 4.78:1 on
+`--panel-3` — legal, but it blended, which is the complaint that prompted this.
+
+The one thing that cannot reach AAA is **the brand pink**. `#FF007A` tops out
+near 5:1 against any dark ground, so pink text at body size is capped at AA by
+arithmetic. The resolution is the rule already stated above: pink only at large
+sizes, where the AAA bar is 4.5:1 and the pairing measures 4.94:1. Anything
+pink-filled (skip link, primary button) therefore sits at **19px/700**, above
+the large-text threshold. A selected control is high-contrast text with a pink
+edge, never small text on a pink fill.
 
 **Type is set from `--fs-label` / `--fs-body` / `--fs-lead`, not literals.**
 The page was originally 10/11px, which passed contrast but was genuinely hard

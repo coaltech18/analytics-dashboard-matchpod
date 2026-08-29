@@ -75,7 +75,7 @@ export function Chart({ rows, seriesKey, seriesLabel, range }: Props) {
     // or transparent image that still "downloads fine".
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = `
-      text { font-family: 'Smooch Sans', system-ui, sans-serif; font-size: 12px; fill: #A8A5A0; font-variant-numeric: tabular-nums lining-nums; }
+      text { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; fill: #C8C5C0; font-variant-numeric: tabular-nums lining-nums; }
       .grid-line { stroke: #2A2A2A; stroke-width: 1; }
       .series { fill: none; stroke: #FF007A; stroke-width: 2; stroke-linejoin: round; }
       .trend { fill: none; stroke: #A8A5A0; stroke-width: 1.2; stroke-dasharray: 4 3; }
@@ -123,7 +123,7 @@ export function Chart({ rows, seriesKey, seriesLabel, range }: Props) {
           {ticks.map((t) => (
             <g key={t.y}>
               <line className="grid-line" x1={PAD_L} y1={t.y} x2={W - PAD_R} y2={t.y} stroke="#2A2A2A" />
-              <text x={PAD_L - 8} y={t.y + 3} textAnchor="end" fill="#A8A5A0" fontSize="12" fontFamily="'Smooch Sans', system-ui, sans-serif">
+              <text x={PAD_L - 8} y={t.y + 3} textAnchor="end" fill="#C8C5C0" fontSize="12" fontFamily="'Space Grotesk', system-ui, sans-serif">
                 {num(t.v)}
               </text>
             </g>
@@ -139,9 +139,9 @@ export function Chart({ rows, seriesKey, seriesLabel, range }: Props) {
               x={px(i, rows.length)}
               y={H - 8}
               textAnchor={i === 0 ? 'start' : i === rows.length - 1 ? 'end' : 'middle'}
-              fill="#A8A5A0"
+              fill="#C8C5C0"
               fontSize="12"
-              fontFamily="'Smooch Sans', system-ui, sans-serif"
+              fontFamily="'Space Grotesk', system-ui, sans-serif"
             >
               {dayMonth(rows[i]!.day)}
             </text>
