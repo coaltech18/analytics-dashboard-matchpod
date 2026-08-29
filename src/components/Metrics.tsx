@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { DailyRow, SeriesKey, Overview, CohortRow } from '../lib/types';
 import { num, pct, cohortWeek } from '../lib/format';
+import { RAMP_3, heatStep, HEAT_LEGEND } from '../lib/viz';
 
 /* ── metric cell ──────────────────────────────────────────────────────────
    A label/value pair IS a definition list, so the grid is a <dl> and each
@@ -85,7 +86,12 @@ export function FunnelBars({ o }: { o: Overview }) {
             <span className="bar-label">{label}</span>
             <span className="bar-val">{num(v)}</span>
             <div className="bar-track">
-              <div className="bar-fill" style={{ width: `${(v / top) * 100}%` }} />
+              {/* Stages are ordered, so they take the ordinal ramp rather than
+                  one flat accent — the darkening reads as progression. */}
+              <div
+                className="bar-fill"
+                style={{ width: `${(v / top) * 100}%`, background: RAMP_3[i % RAMP_3.length] }}
+              />
             </div>
             {conv !== null && prev !== null && (
               <div className="bar-drop">
@@ -99,50 +105,14 @@ export function FunnelBars({ o }: { o: Overview }) {
   );
 }
 
-/* ── activity composition ─────────────────────────────────────────────────
-   Disjoint bands, unlike the cumulative cells above. The legend carries each
-   label, count and share as text, so colour is never the only way to read it. */
-
-export function ActivityStack({ o }: { o: Overview }) {
-  const all: [string, number | null, string][] = [
-    ['Active 7d', o.active_7d, '#FF007A'],
-    ['Dormant 7–30d', o.dormant_7_30d, '#8C8983'],
-    ['Dormant 30d+', o.dormant_30d_plus, '#3D3D3D'],
-  ];
-  const bands = all.filter((b): b is [string, number, string] => typeof b[1] === 'number');
-
-  const total = bands.reduce((a, b) => a + b[1], 0);
-  if (!total) return null;
-
-  return (
-    <>
-      <div className="stack" role="img" aria-label={
-        bands.map(([l, v]) => `${l}: ${v}`).join(', ')
-      }>
-        {bands.map(([label, v, colour]) => (
-          <span key={label} style={{ width: `${(v / total) * 100}%`, background: colour }} />
-        ))}
-      </div>
-      <div className="legend">
-        {bands.map(([label, v, colour]) => (
-          <span key={label}>
-            <i style={{ background: colour }} />
-            {label} — <b style={{ color: 'var(--fg)' }}>{num(v)}</b> (
-            {Math.round((v / total) * 1000) / 10}%)
-          </span>
-        ))}
-      </div>
-    </>
-  );
-}
-
 /* ── cohorts ────────────────────────────────────────────────────────────── */
 
 export function CohortTable({ rows }: { rows: CohortRow[] }) {
   if (!rows.length) return <div className="empty">No cohort data yet.</div>;
 
   return (
-    <div className="table-wrap">
+    <>
+      <div className="table-wrap">
       <table>
         <caption>
           Signup cohorts by week. &ldquo;Still active&rdquo; is current, not day-N: of the
@@ -161,7 +131,7 @@ export function CohortTable({ rows }: { rows: CohortRow[] }) {
         </thead>
         <tbody>
           {rows.map((r) => {
-            const heat = Math.min(1, (Number(r.still_active_pct) || 0) / 100);
+            const t = Math.min(1, (Number(r.still_active_pct) || 0) / 100);
             return (
               <tr key={r.cohort_week}>
                 <th scope="row">{cohortWeek(r.cohort_week)}</th>
@@ -170,8 +140,10 @@ export function CohortTable({ rows }: { rows: CohortRow[] }) {
                 <td>{pct(r.onboarded_pct)}</td>
                 <td>{num(r.active_last_7d)}</td>
                 <td>{num(r.active_last_30d)}</td>
-                {/* Tint plus the value as text in the same cell. */}
-                <td className="heat strong" style={{ ['--heat' as string]: heat }}>
+                {/* Discrete step from the sequential ramp, with the value as
+                    text in the same cell — the tint never carries it alone. */}
+                <td className="heat strong">
+                  <i className="heat-chip" style={{ background: heatStep(t) }} aria-hidden />
                   <span>{pct(r.still_active_pct)}</span>
                 </td>
               </tr>
@@ -179,6 +151,19 @@ export function CohortTable({ rows }: { rows: CohortRow[] }) {
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+
+      {/* Outside .table-wrap on purpose: inside it, the legend scrolls away
+          with the columns exactly when a reader needs it. */}
+      <div className="heat-scale">
+        <span className="hs-label">Still active</span>
+        {HEAT_LEGEND.map((step) => (
+          <span className="hs-step" key={step.hex}>
+            <i style={{ background: step.hex }} aria-hidden />
+            {step.from}–{step.to}%
+          </span>
+        ))}
+      </div>
+    </>
   );
 }

@@ -3,7 +3,8 @@ import { fetchMetrics, supabase, MetricsError } from '../lib/supabase';
 import { exportCsv } from '../lib/csv';
 import { num, pct } from '../lib/format';
 import { SERIES, type MetricsPayload, type SeriesKey } from '../lib/types';
-import { MetricGrid, FunnelBars, ActivityStack, CohortTable } from './Metrics';
+import { MetricGrid, FunnelBars, CohortTable } from './Metrics';
+import { Donut } from './Donut';
 import { Chart } from './Chart';
 import { Logo } from './Logo';
 
@@ -191,7 +192,17 @@ export function Dashboard() {
                     { label: 'last_seen unknown', value: num(a?.last_seen_unknown), sub: 'expect 0' },
                   ]}
                 />
-                <ActivityStack o={o} />
+                <Donut
+                  centreLabel="profiles"
+                  centreValue={num(
+                    (o.active_7d ?? 0) + (o.dormant_7_30d ?? 0) + (o.dormant_30d_plus ?? 0),
+                  )}
+                  slices={[
+                    { label: 'Active 7d', value: o.active_7d ?? 0 },
+                    { label: 'Dormant 7–30d', value: o.dormant_7_30d ?? 0 },
+                    { label: 'Dormant 30d+', value: o.dormant_30d_plus ?? 0 },
+                  ].filter((s) => s.value > 0)}
+                />
               </section>
 
               <section>

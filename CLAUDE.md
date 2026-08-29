@@ -159,6 +159,42 @@ Note that brand ink `#252525` and this page's `--panel` `#121212` differ on
 purpose — see `brand/README.md` for why lightening the panel would break the
 measured contrast ratios.
 
+## Charts
+
+Chart colour lives in `src/lib/viz.ts` and nowhere else. Every ramp there was
+run through the dataviz skill's validator against this page's real surface
+(`#121212`) — not eyeballed. Re-run it if you touch a value:
+
+```bash
+node scripts/validate_palette.js "#FF6FAF,#FF007A,#B8005A" --ordinal --mode dark --surface "#121212"
+```
+
+**One hue, not a categorical palette.** Almost nothing here is an *identity*.
+Funnel stages and activity bands are **ordered** (sequence, recency) and cohort
+retention is a **magnitude** — both take an ordinal/sequential ramp, one hue
+light→dark. Eight hues would double-encode bar length as colour and spend the
+only free channel on information the chart already shows. If a genuinely
+categorical chart ever appears, do not extend the pink ramp: take the skill's
+categorical slots in fixed order and validate them against `#121212`.
+
+**Rules carried from the skill, and worth keeping:**
+
+- Touching marks are separated by a **2px gap in the surface colour**, never by
+  a stroke around them — a stroke adds a third colour and thickens the mark.
+- A **sequential scale ships its legend**, or darker means nothing.
+- Heat is a **discrete step shown as a chip beside the value**, not a wash
+  behind it: a tint dark enough to read as "high" drags the text contrast down
+  with it.
+- The donut is legitimate only because it is part-to-whole, at a glance, with
+  three segments. It is the wrong form for comparing close values or past ~6
+  segments — use bars. Never a 2-slice pie; that is a stat tile.
+- **Never a dual-axis chart.** Two measures of different scale become two
+  charts, not two y-scales.
+
+**Where this repo deliberately departs from the skill:** its mark spec calls for
+4px rounded data-ends. This design system is 90° corners throughout, and
+rounding is not among the skill's non-negotiables, so squared ends win.
+
 ## Design
 
 Tactical Telemetry: 90° corners throughout (no `border-radius`), hairline rules
