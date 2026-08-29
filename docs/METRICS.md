@@ -37,7 +37,7 @@ on. It carries every private profile column, so leave it revoked.
 
 ---
 
-# The dashboard at metrics.matchpod.in
+# The dashboard at analytics.matchpod.in
 
 Two pieces, because the views are service-role only and **the service key can
 never go in a browser** — it grants unrestricted read/write on the whole
@@ -79,7 +79,7 @@ supabase functions deploy metrics
 ```
 
 ```bash
-supabase secrets set METRICS_ADMIN_IDS=<your-user-uuid> METRICS_ALLOWED_ORIGINS=https://metrics.matchpod.in
+supabase secrets set METRICS_ADMIN_IDS=<your-user-uuid> METRICS_ALLOWED_ORIGINS=https://analytics.matchpod.in
 ```
 
 `METRICS_ADMIN_IDS` takes a comma-separated list. **If it is unset the function
@@ -90,13 +90,14 @@ denies everyone** — it fails closed, so a half-finished deploy exposes nothing
 Point it at production for real numbers. The anon key is safe in public source —
 it already ships inside the mobile app binary and grants nothing on its own.
 
-**5. Host it.** It is one static file, no build step. Cloudflare Pages, Netlify
-and Vercel all work on their free tiers:
+**5. Host it.** React + Vite, built to static files and
+hosted on Hostinger shared hosting:
 
-- Cloudflare Pages → Create project → connect the repo → build command *(none)*,
-  output directory `web/metrics`.
-- Then Custom domains → `metrics.matchpod.in`, which adds the CNAME for you if
-  the domain's DNS is on Cloudflare.
+- Build with `npm run build`, then upload the **contents of `dist/`** to the
+  `analytics.matchpod.in` document root via hPanel File Manager.
+- Confirm SSL is issued for the subdomain and Force HTTPS is on. Until it is,
+  the page is served over `http://` and will fail CORS against the `https://`
+  entry in `METRICS_ALLOWED_ORIGINS`.
 
 **6. Sign in** on the page with the account whose id you allowlisted.
 

@@ -9,7 +9,7 @@
 //    automatically. You must set these two yourself:
 //
 //      supabase secrets set METRICS_ADMIN_IDS=<your-auth-user-uuid>
-//      supabase secrets set METRICS_ALLOWED_ORIGINS=https://metrics.matchpod.in
+//      supabase secrets set METRICS_ALLOWED_ORIGINS=https://analytics.matchpod.in
 //
 //    Find your uuid with:  select id, email from auth.users where email = '...';
 //    METRICS_ADMIN_IDS accepts a comma-separated list. If it is unset or empty
@@ -38,9 +38,9 @@ const VIEWS = {
 } as const;
 
 const DEFAULT_ORIGINS = [
-  'https://metrics.matchpod.in',
+  'https://analytics.matchpod.in',
   'http://localhost:5173',
-  'http://localhost:8080',
+  'http://localhost:5183',
 ];
 
 function allowedOrigins(): string[] {

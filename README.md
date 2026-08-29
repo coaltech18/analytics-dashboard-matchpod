@@ -48,7 +48,7 @@ npx supabase functions deploy metrics --project-ref <prod-ref>
 ```
 
 ```bash
-npx supabase secrets set --project-ref <prod-ref> METRICS_ADMIN_IDS=<your-user-uuid> METRICS_ALLOWED_ORIGINS=https://metrics.matchpod.in
+npx supabase secrets set --project-ref <prod-ref> METRICS_ADMIN_IDS=<your-user-uuid> METRICS_ALLOWED_ORIGINS=https://analytics.matchpod.in
 ```
 
 `METRICS_ADMIN_IDS` takes a comma-separated list. If it is unset the function
@@ -73,7 +73,7 @@ nothing on its own.
 ### 5. Host it
 
 One static file, no build — upload it and you are done. It lives on Hostinger
-shared hosting at `metrics.matchpod.in`.
+shared hosting at `analytics.matchpod.in`.
 
 1. hPanel → **Domains → Subdomains** → create `metrics`. This makes a document
    root, usually `public_html/metrics`.
@@ -90,7 +90,7 @@ shared hosting at `metrics.matchpod.in`.
    without editing anything. There is no router, so Hostinger needs **no SPA
    rewrite rule**; any 404 is a genuinely missing file.
 4. hPanel → **SSL** → confirm a certificate is *issued* for
-   `metrics.matchpod.in`, then turn on **Force HTTPS**.
+   `analytics.matchpod.in`, then turn on **Force HTTPS**.
 
 Step 4 is not cosmetic. Until the certificate exists the page is served over
 `http://`, and that origin does not match the `https://` entry in
