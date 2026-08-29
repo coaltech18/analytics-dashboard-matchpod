@@ -1,22 +1,6 @@
 # MatchPod Analytics Dashboard
 
-Single-operator metrics dashboard.
-
-**There are two frontends in this repo, doing the same job against the same
-backend. Deploy one.**
-
-| | `index.html` | `app/` |
-|---|---|---|
-| stack | one file, no build | React 18 + TypeScript + Vite |
-| deploy | upload one file | `npm run build`, upload `dist/` |
-| size | 44 KB | ~110 KB gzipped |
-| dependencies | supabase-js from a CDN | 77 packages |
-
-Both have the same login, the same metrics, the same design system and the same
-exports. The React one is easier to extend; the single file is easier to keep
-alive. Pick whichever you will actually maintain, and delete the other —
-carrying both means every change gets made twice, and the day they drift is the
-day you stop trusting the numbers.
+Single-operator metrics dashboard. React 18 + TypeScript + Vite, in `app/`.
 
 Funnel, activity and dormancy, engagement, waitlist, a 90-day trend chart, and
 signup cohorts. CSV / PNG / PDF export.
@@ -72,8 +56,13 @@ denies everyone — it fails closed, so a half-finished deploy exposes nothing.
 
 ### 4. Configure this page
 
-Edit `window.MP_CONFIG` at the top of `index.html` with the project URL and the
-**anon** key (Supabase → Settings → API).
+```bash
+cd app && cp .env.example .env
+```
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from Supabase → Settings
+→ API. These are inlined into the bundle at build time, so rebuild after
+changing them — they are not read at runtime.
 
 Point it at production for real numbers. The anon key is safe in public source:
 it is designed to be public, already ships in the mobile app binary, and grants
@@ -89,9 +78,17 @@ shared hosting at `metrics.matchpod.in`.
 1. hPanel → **Domains → Subdomains** → create `metrics`. This makes a document
    root, usually `public_html/metrics`.
 2. If Hostinger leaves a parking page or `default.php` in that folder, delete
-   it — it can win over your `index.html`.
-3. **File Manager** → upload `index.html` into that folder. One file, drag and
-   drop. There is nothing to compile.
+   it — it can win over the `index.html` you are about to upload.
+3. Build, then upload **the contents of `app/dist/`** into that folder — the
+   files, not the folder itself:
+
+   ```bash
+   cd app && npm install && npm run build
+   ```
+
+   `base` is `./`, so the bundle works at a subdomain root or a subfolder
+   without editing anything. There is no router, so Hostinger needs **no SPA
+   rewrite rule**; any 404 is a genuinely missing file.
 4. hPanel → **SSL** → confirm a certificate is *issued* for
    `metrics.matchpod.in`, then turn on **Force HTTPS**.
 
@@ -108,7 +105,8 @@ certificate issuance fails until you grey-cloud it.
 
 Whatever origin you land on must be in `METRICS_ALLOWED_ORIGINS`.
 
-Nothing deploys from git — changes go live by re-uploading `index.html`.
+Nothing deploys from git — changes go live by re-running `npm run build` and
+re-uploading `app/dist/`.
 
 ---
 
@@ -140,7 +138,7 @@ Seeded demo profiles are excluded from every figure.
 
 | symptom | cause |
 |---|---|
-| "Not configured" | `MP_CONFIG` still has the placeholder values |
+| "Not configured" | `app/.env` is missing or still has placeholder values |
 | "not on the metrics allowlist" | your user id is not in `METRICS_ADMIN_IDS` |
 | "Dashboard not configured" (503) | `METRICS_ADMIN_IDS` was never set |
 | "Some views failed" | `sql/metrics_views.sql` was never run on that project |

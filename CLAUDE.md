@@ -1,18 +1,7 @@
 # MatchPod Analytics Dashboard
 
-Two frontends, one backend. Deploy one frontend, not both.
-
-- `index.html` — a single self-contained file. No build step, no framework, no
-  bundler. Open it, edit it, deploy it.
-- `app/` — React 18 + TypeScript + Vite, added later on request. Same metrics,
-  same design system, same backend, same exports.
-
-They are duplicates on purpose but not forever: a change made in one and not
-the other is a bug waiting to be believed. When you pick a winner, delete the
-loser rather than letting them drift.
-
-Everything below about security, contrast, the chart and the exports applies to
-**both** — the React port carries the same rules and the same comments.
+React 18 + TypeScript + Vite, in `app/`. Built with `npm run build`, deployed
+as static files — there is no server.
 
 The frontend is the frontend only. It reads numbers from the MatchPod Supabase project
 over HTTPS and renders them.
@@ -83,9 +72,13 @@ this page  ──JWT──▶  functions/v1/metrics  ──service role──▶
 
 ## Configuration
 
-`window.MP_CONFIG` at the top of `index.html`: the project URL and the anon key.
-Point it at **production** for real numbers; the staging project holds demo
-seeds and a couple of testers.
+`app/.env`: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Point them at
+**production** for real numbers; the staging project holds demo seeds and a
+couple of testers.
+
+`VITE_*` values are inlined into the bundle at build time, not read at runtime,
+so a change means a rebuild. That inlining is also why the service role key
+must never be a `VITE_` var — it would ship inside the JavaScript.
 
 Two secrets are set on the edge function itself, never in this page's source:
 
@@ -138,10 +131,19 @@ that remainder into a large grey slab.
 
 ## Verifying a change
 
-There is no test suite and it does not need one — but do not claim a change
-works without loading the page. If you cannot reach the live backend, stub the
-fetch with mock data and check: the chart at 7/30/90 days, both exports, and the
-page at 375px wide.
+There is no test suite and it does not need one — but `npm run build` passing
+is not evidence the page works, and neither is a clean typecheck. Do not claim
+a change works without loading it.
+
+Without the live backend, use the built-in mock:
+
+```bash
+cd app && echo VITE_MOCK=1 > .env.local && npm run dev
+```
+
+Then check: the chart at 7/30/90 days, both exports, and the page at 375px
+wide. The mock is gated behind `import.meta.env.DEV`; confirm it never reaches
+a build with `grep -c mockPayload dist/assets/*.js`, which must print 0.
 
 The exports are the easiest thing to break silently:
 

@@ -1,7 +1,7 @@
 # MatchPod Metrics — React app
 
-React 18 + TypeScript + Vite. Same numbers, same design system and same
-backend as the single-file `../index.html`; this one has a build step.
+React 18 + TypeScript + Vite. The dashboard itself — the repo root holds the
+backend (`../sql`, `../supabase`) and the docs.
 
 ## Run it
 
