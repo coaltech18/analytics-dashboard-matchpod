@@ -216,6 +216,7 @@ Seeded demo profiles are excluded from every figure.
 | "not on the metrics allowlist" | your user id is not in `METRICS_ADMIN_IDS` |
 | "Dashboard not configured" (503) | `METRICS_ADMIN_IDS` was never set |
 | "Some views failed" | `sql/metrics_views.sql` was never run on that project |
+| "permission denied for table users" | re-run `sql/metrics_views.sql`; the overview needs `mp_signup_count()`, which is created there |
 | Onboardings series missing from the chart | expected on production — no `analytics_events` table. See docs/METRICS.md |
 | CORS error in the console | this origin is not in `METRICS_ALLOWED_ORIGINS` |
 | CORS error, but the origin *looks* right | you are on `http://`, the allowlist says `https://`. Finish SSL |

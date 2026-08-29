@@ -57,6 +57,41 @@
 
 begin;
 
+-- ── 0a. Signup count ────────────────────────────────────────────────────────
+-- auth.users is owned by supabase_auth_admin, and service_role has no SELECT on
+-- it. Every view here is security_invoker, so the overview view inherited that
+-- and failed with "permission denied for table users" while the other four
+-- worked.
+--
+-- The blunt fix would be `grant select on auth.users to service_role`, which
+-- hands that role every user's email, phone and metadata permanently, for one
+-- integer. This does the opposite: a security definer function that returns
+-- exactly the count and nothing else.
+--
+-- security definer runs as the function owner (postgres), so it can read
+-- auth.users. `set search_path = ''` is mandatory hardening for a definer
+-- function — without it a caller could put a malicious `auth` schema earlier on
+-- the path and have this run against their own table. Every name below is
+-- therefore fully qualified.
+create or replace function public.mp_signup_count()
+returns bigint
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select count(*) from auth.users where id::text not like '5eed0000%';
+$$;
+
+-- Same posture as the views: service role only.
+--
+-- The grant is NOT optional. Functions are EXECUTE-to-PUBLIC by default, and
+-- every role is implicitly a member of PUBLIC — so revoking from PUBLIC also
+-- takes it away from service_role, trading one permission error for another.
+-- Revoke first, then grant back explicitly to the one role that should have it.
+revoke all on function public.mp_signup_count() from public, anon, authenticated;
+grant execute on function public.mp_signup_count() to service_role;
+
 -- ── 0. Base: real users only ────────────────────────────────────────────────
 -- Every view below builds on this so the seed filter is written once. `select
 -- *` is expanded at creation time, so a column added to profiles later will
@@ -223,9 +258,9 @@ create or replace view public.mp_metrics_overview
 with (security_invoker = on) as
 select
   -- Signed up but never even created a profile row is a real drop-off stage,
-  -- so this counts auth.users, not profiles.
-  (select count(*) from auth.users
-    where id::text not like '5eed0000%')                             as signed_up,
+  -- so this counts auth.users, not profiles. Via the definer function above:
+  -- this view is security_invoker and the caller cannot read auth.users.
+  public.mp_signup_count()                                           as signed_up,
   a.profiles                                                         as started_profile,
   a.onboarded,
   a.deactivated,
@@ -257,7 +292,8 @@ cross join public.app_config c
 where c.id = 1;
 
 -- ── Grants — service role only, same posture as 034/035/041 ─────────────────
--- These views expose whole-population counts and read auth.users; no app role
+-- These views expose whole-population counts, and reach auth.users only
+-- through mp_signup_count() above; no app role
 -- has any business selecting from them. Revoked rather than never-granted,
 -- because Supabase's default privileges grant authenticated access to new
 -- objects in public (the leak 044 had to clean up on analytics_events).
