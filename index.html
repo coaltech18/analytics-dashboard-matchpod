@@ -22,7 +22,7 @@
   WCAG AA (see the token block), charts expose their numbers as real tables,
   and no meaning is carried by colour alone.
 
-  Reads mp_metrics_* (migration 048) via the `metrics` edge function, which
+  Reads mp_metrics_* (sql/metrics_views.sql) via the `metrics` edge function, which
   holds the service role key server-side. This page only ever sees aggregate
   numbers and the public anon key.
 
@@ -806,7 +806,7 @@ async function load() {
   }
 
   if (body.errors) {
-    fail('Some views failed — is migration 048 applied? ' +
+    fail('Some views failed — has sql/metrics_views.sql been run? ' +
       Object.entries(body.errors).map(([k, v]) => `${k}: ${v}`).join(' · '));
   } else {
     $('errors').classList.add('hidden');

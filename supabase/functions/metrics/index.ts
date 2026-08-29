@@ -16,7 +16,7 @@
 //    this function denies EVERYONE — it fails closed on purpose, so a
 //    misconfigured deploy exposes nothing.
 //
-// 3. Requires migration 048_metrics_views.sql to be applied.
+// 3. Requires sql/metrics_views.sql to have been run on the project.
 // ──────────────────────────────────────────────────────────────────────────────
 //
 // WHY THIS EXISTS AT ALL
