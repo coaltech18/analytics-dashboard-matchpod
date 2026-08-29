@@ -123,6 +123,19 @@ on every metric label. Do not darken the greys to make it look moodier.
 caught the pressed range/series buttons, the primary button and the skip link.
 It is also the brand's own ink-on-pink pairing (`brand/logo4`, `logo8`).
 
+**The faces are Anton (display) and Smooch Sans (everything else).** Two
+consequences that are easy to trip over:
+
+- **Anton has one weight.** Setting `font-weight: 700` on display text gets a
+  synthesised bold, which looks smeared. Leave it at 400.
+- **Neither face has tabular figures.** `font-variant-numeric: tabular-nums` is
+  declared and is currently *inert* — measured, five digits vary by 27.8px in
+  Anton and 10.8px in Smooch Sans. Number columns are right-aligned so the right
+  edge stays flush, which is what matters when scanning one. If ragged digits
+  ever become a real problem the answer is a face with `tnum`, not more CSS.
+- Smooch Sans is **condensed and light at 400**. UI labels sit at **600** to
+  survive at small sizes; do not drop them back to 400 to "clean it up".
+
 **Type is set from `--fs-label` / `--fs-body` / `--fs-lead`, not literals.**
 The page was originally 10/11px, which passed contrast but was genuinely hard
 to read for a tool opened daily. Nothing renders below 11px, including the SVG
@@ -152,7 +165,7 @@ its true bounds — not loaded as a file, and not padded back out to the source
 full-bleed because a circle throws away its corners at 16px.
 
 Do not use the full lockup (`brand/logo1.svg`) in the app: the header already
-sets the name in Archivo Black, and the lockup carries its own wordmark, so the
+sets the name in Anton, and the lockup carries its own wordmark, so the
 two together show "MatchPod" twice in two typefaces.
 
 Note that brand ink `#252525` and this page's `--panel` `#121212` differ on
@@ -227,7 +240,7 @@ rounding is not among the skill's non-negotiables, so squared ends win.
 ## Design
 
 Tactical Telemetry: 90° corners throughout (no `border-radius`), hairline rules
-drawn as a 1px ring per cell, Archivo Black for numerals, Space Mono for every
+drawn as a 1px ring per cell, Anton for numerals, Smooch Sans for every
 label, MatchPod's ink/paper/pink.
 
 Note the hairline technique: rules come from `box-shadow: 0 0 0 1px` on each

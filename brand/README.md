@@ -42,7 +42,7 @@ Placements:
 | Browser tab | white on pink | favicon |
 
 The full lockup (`logo1`) is deliberately **not** used in the app: the
-dashboard already sets `MATCHPOD METRICS` in Archivo Black, and pairing that
+dashboard already sets `MATCHPOD METRICS` in Anton, and pairing that
 with the lockup's own wordmark would show the name twice in two typefaces.
 
 ## Two things to know before changing this

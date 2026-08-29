@@ -2,7 +2,7 @@
    Ported from the original single-file dashboard; the contrast ratios in the
    token block are measured, not guessed. Read CLAUDE.md before changing one. */
 
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Smooch+Sans:wght@300..800&display=swap');
 
 :root {
   --bg:        #0A0A0A;
@@ -25,9 +25,14 @@
                              never body copy: tiring at 11px */
   --pink-dim:  rgba(255, 0, 122, 0.14);
 
-  --display: 'Archivo Black', system-ui, sans-serif;
-  --body:    'Space Grotesk', system-ui, sans-serif;
-  --mono:    'Space Mono', ui-monospace, 'Courier New', monospace;
+  /* Anton is single-weight (400 only) — asking for 700 gets a synthesised
+     bold, so never set font-weight on display text. Smooch Sans is variable
+     300..800 and carries every weight this page needs. */
+  --display: 'Anton', Impact, system-ui, sans-serif;
+  --body:    'Smooch Sans', system-ui, sans-serif;
+  /* Kept as a separate token so the one place that needs even digit columns
+     can be changed independently — see the tabular-nums note below. */
+  --mono:    'Smooch Sans', system-ui, sans-serif;
 
   /* Text on a pink field. White measures 3.8:1 and FAILS AA at these sizes;
      ink is 4.94:1 and passes. It is also the brand's own ink-on-pink pairing
@@ -37,14 +42,37 @@
   /* Type scale. The dashboard was originally set at 10/11px, which measured
      fine for contrast but was genuinely hard to read for a tool used daily.
      Do not take these back down; small mono is where legibility goes first. */
-  --fs-label:  11px;      /* uppercase mono labels, captions, table heads */
-  --fs-body:   12.5px;    /* buttons, tables, prose, messages */
-  --fs-lead:   13.5px;    /* skip link, primary button, inputs */
+  --fs-label:  13px;      /* uppercase labels, captions, table heads */
+  --fs-body:   15px;      /* buttons, tables, prose, messages */
+  --fs-lead:   16px;      /* skip link, primary button, inputs */
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 * { box-sizing: border-box; }
+
+/* Every number on this page sits in a column with other numbers. Proportional
+   digits make those columns ragged and make two figures of the same magnitude
+   look different lengths, so figures are tabular and lining everywhere. */
+/* Declared for correctness and for whatever face comes next: NEITHER Anton nor
+   Smooch Sans ships a `tnum` feature, so today this is inert. Measured: five
+   digits vary by 27.8px in Anton and 10.8px in Smooch Sans. Number columns are
+   right-aligned so the right edge stays flush, which is what matters for
+   scanning one; if ragged digits ever become a problem, the fix is a face with
+   tabular figures, not more CSS. */
+body, table, .value, .bar-val, .dl-value, input {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Smooch Sans is condensed and light at 400 — noticeably thinner than the
+   monospace it replaced. Small uppercase labels need weight to survive, so the
+   UI text sits at 600 rather than relying on size alone. */
+body { font-weight: 400; }
+.cell dt, thead th, .sec-note, .ni-label, .hs-label, label,
+.sub-head, h2, .bar-label, .btn, caption, summary {
+  font-weight: 600;
+}
+.value, .page-head h1, .nav-brand { font-weight: 400; }  /* Anton has one weight */
 
 body {
   margin: 0;
