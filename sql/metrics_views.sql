@@ -179,11 +179,21 @@ select
   d::date                                                            as day,
   (select count(*) from public.mp_real_profiles p
     where p.created_at >= d and p.created_at < d + interval '1 day') as signups,
-  -- Onboardings come from the event log, not from profiles: is_onboarded has
-  -- no timestamp of its own and updated_at moves on every profile edit.
-  (select count(*) from public.analytics_events e
-    where e.event = 'onboarding_completed'
-      and e.created_at >= d and e.created_at < d + interval '1 day') as onboardings,
+  -- Onboardings need the event log: is_onboarded has no timestamp of its own,
+  -- and updated_at moves on every profile edit, so neither can date them.
+  --
+  -- This project has no analytics_events table (migration 041 was never
+  -- applied here), so the series is NULL rather than 0. That distinction
+  -- matters: 0 would plot as a flat line reading "nobody onboarded for 90
+  -- days", which is false. NULL means "not recorded", and the dashboard hides
+  -- the series instead of drawing it.
+  --
+  -- If 041 is ever applied, swap this line back to the real count:
+  --   (select count(*) from public.analytics_events e
+  --     where e.event = 'onboarding_completed'
+  --       and e.created_at >= d and e.created_at < d + interval '1 day')
+  -- Note it will only have history from the day the app starts writing events.
+  null::bigint                                                       as onboardings,
   (select count(distinct sw.swiper_id) from public.swipes sw
     where sw.swiper_id::text not like '5eed0000%'
       and sw.created_at >= d and sw.created_at < d + interval '1 day')

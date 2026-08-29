@@ -67,6 +67,26 @@ export function Dashboard() {
     [daily, range],
   );
 
+  // A series the database cannot record arrives as all-null. Plotting it would
+  // draw a flat zero line reading "none, every day" — false rather than empty.
+  // Split them out and offer only the ones with data.
+  const available = useMemo(
+    () => SERIES.filter((s) => daily.some((r) => r[s.key] !== null && r[s.key] !== undefined)),
+    [daily],
+  );
+  const unavailable = useMemo(
+    () => SERIES.filter((s) => !available.includes(s)),
+    [available],
+  );
+
+  // If the selected series turns out to be one of the unrecorded ones, fall
+  // back rather than rendering an empty chart.
+  useEffect(() => {
+    if (available.length && !available.some((s) => s.key === series)) {
+      setSeries(available[0]!.key);
+    }
+  }, [available, series]);
+
   const o = data?.overview;
   const a = data?.activity;
   const e = data?.engagement;
@@ -219,7 +239,7 @@ export function Dashboard() {
               </div>
 
               <div className="controls" style={{ marginBottom: 12 }}>
-                {SERIES.map((s) => (
+                {available.map((s) => (
                   <button
                     key={s.key}
                     className="btn"
@@ -230,6 +250,16 @@ export function Dashboard() {
                   </button>
                 ))}
               </div>
+
+              {unavailable.length > 0 && (
+                <p className="msg" style={{ marginBottom: 12 }}>
+                  Not recorded by this database:{' '}
+                  <b style={{ color: 'var(--fg)' }}>
+                    {unavailable.map((s) => s.label).join(', ')}
+                  </b>
+                  . Shown as absent rather than zero — see docs/METRICS.md.
+                </p>
+              )}
 
               <div className="controls" style={{ marginBottom: 12 }}>
                 {([7, 30, 90] as const).map((r) => (

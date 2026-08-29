@@ -39,7 +39,10 @@ function return_row(out: DailyRow[], d: Date, signups: number, swipes: number, r
   out.push({
     day: d.toISOString().slice(0, 10),
     signups,
-    onboardings: Math.round(signups * (0.55 + r() * 0.3)),
+    // NULL on purpose: production has no analytics_events table, so this
+    // series is genuinely unrecorded there. Keeping the mock honest means the
+    // "not recorded" path is exercised in dev instead of only in production.
+    onboardings: null,
     active_swipers: Math.round(swipes / (6 + r() * 4)),
     swipes,
     matches,

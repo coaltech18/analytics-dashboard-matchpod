@@ -36,6 +36,9 @@ export function MetricGrid({ cells, daily }: { cells: Cell[]; daily: DailyRow[] 
 function Sparkline({ series, daily }: { series: SeriesKey; daily: DailyRow[] }) {
   const rows = daily.slice(-30);
   if (rows.length < 2) return null;
+  // All-null means the database does not record this. Drawing it would put a
+  // flat line under the number, implying a measured zero.
+  if (!rows.some((r) => r[series] !== null && r[series] !== undefined)) return null;
 
   const values = rows.map((r) => Number(r[series]) || 0);
   const max = Math.max(...values, 1);

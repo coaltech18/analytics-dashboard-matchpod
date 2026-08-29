@@ -221,3 +221,21 @@ Add these only once you are actually reading the current ones weekly.
   "opened the app" stops being a good enough proxy.
 - **Funnel past onboarding** — first swipe, first match, first message, keyed
   off days-since-signup.
+
+## Not available on this project
+
+**Daily onboardings.** Dating a signup's onboarding needs the event log:
+`is_onboarded` is a boolean with no timestamp, and `updated_at` moves on every
+profile edit, so neither can say *when* someone onboarded.
+
+The production project has no `analytics_events` table — migration 041 was
+never applied there — so `mp_metrics_daily.onboardings` is `NULL`, not `0`.
+The dashboard hides the series and says so, rather than drawing a flat line
+that would read "nobody onboarded for 90 days".
+
+The **total** onboarded count is unaffected: it comes from `is_onboarded` on
+profiles and is correct. It is only the day-by-day breakdown that is missing.
+
+To get it back, apply 041 to production. History starts the day the app begins
+writing events — it cannot be backfilled.
+
