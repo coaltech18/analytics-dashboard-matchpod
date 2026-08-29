@@ -1,0 +1,28 @@
+# Hostinger runs Apache. Two things a PWA needs from the server that it does not
+# get by default.
+
+# 1. MIME types. Apache does not know .webmanifest out of the box and will serve
+#    it as text/plain or octet-stream, which makes the browser ignore the
+#    manifest entirely — no install prompt, no icon, and no obvious error.
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType image/svg+xml .svg
+</IfModule>
+
+# 2. Caching. The hashed assets under /assets/ are immutable and can be cached
+#    hard. index.html and sw.js must NOT be: a cached service worker never
+#    updates itself, so a stale one would keep serving the old app forever, and
+#    a cached index.html would keep pointing at deleted asset filenames after a
+#    redeploy.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|png|svg|woff2)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^(sw\.js|index\.html|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# No SPA rewrite rule here on purpose: routing is hash-based, so every URL the
+# app uses resolves to index.html without one. If you ever switch to path
+# routing, this is where the rewrite would go.

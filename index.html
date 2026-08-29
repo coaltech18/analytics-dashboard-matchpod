@@ -2,12 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="robots" content="noindex, nofollow" />
+
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-  <!-- Paints the browser chrome to match the page instead of leaving a white
-       bar above a near-black dashboard. -->
+  <link rel="manifest" href="./manifest.webmanifest" />
+
+  <!-- iOS ignores the manifest for home-screen installs: it needs its own
+       apple-touch-icon and these meta tags, or you get a screenshot of the page
+       as the icon and a Safari chrome bar instead of a standalone window. -->
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Metrics" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Paints the browser and OS chrome to match the page instead of leaving a
+       white bar above a near-black dashboard. -->
   <meta name="theme-color" content="#0A0A0A" />
+
   <title>MatchPod Metrics</title>
 </head>
 <body>

@@ -213,6 +213,30 @@ Two things a multi-page shell must keep:
 Every page carries one honest sentence about what its numbers are worth. That
 is the point of splitting them up — `docs/METRICS.md` has the full version.
 
+## PWA
+
+`public/manifest.webmanifest`, `public/sw.js`, `public/.htaccess` and the icons.
+
+**The service worker caches the shell and never the numbers.** Any request to a
+different origin — above all `supabase.co` — is passed straight through and
+never stored. A dashboard that serves a cached figure is worse than one that
+fails to load: a stale number is indistinguishable from a fresh one. Verified by
+inspecting the cache after a session; it holds only HTML, the hashed bundle and
+icons.
+
+Navigations are network-first so a redeploy lands immediately; hashed assets are
+cache-first because their names change when their content does. There is no
+build-time precache list, so nothing has to be kept in sync with the hashes.
+
+Bump `VERSION` in `sw.js` to invalidate every cached shell on the next deploy.
+
+Icons are generated from `public/favicon.svg` and `public/icon-maskable.svg`.
+The maskable one is a separate file on purpose: Android crops to a circle, so
+the mark has to sit inside the central 80%, while the favicon scales the house
+up to fill a 16px tab. If you regenerate them, **write the output somewhere
+other than `public/`** — `sharp-cli` names its output after the input and keeps
+the input's extension, which will overwrite the SVG sources with PNG bytes.
+
 ## Charts
 
 Chart colour lives in `src/lib/viz.ts` and nowhere else. Every ramp there was

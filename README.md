@@ -139,6 +139,27 @@ supabase/functions/ the edge function
 docs/METRICS.md     what each number is honestly worth
 ```
 
+## Installing it on a phone
+
+It is a PWA: open `https://analytics.matchpod.in` on the phone and use **Add to
+Home Screen**. It then launches without browser chrome, with the MatchPod mark
+as the icon.
+
+- **Android / Chrome** reads `manifest.webmanifest` and offers an install prompt.
+- **iOS / Safari** ignores the manifest for installs — it needs
+  `apple-touch-icon.png` and the `apple-mobile-web-app-*` meta tags, which are
+  in `index.html`. Without them you get a screenshot of the page as the icon.
+
+**It works offline only as a shell.** The app opens, then tells you it cannot
+reach the metrics function. That is deliberate: `sw.js` caches the HTML, bundle
+and icons, and never caches a Supabase response. A cached metric looks exactly
+like a fresh one, and you would make decisions on it.
+
+Two things the server has to get right, both handled by `public/.htaccess`:
+Apache does not know the `.webmanifest` type by default (the browser then
+ignores the manifest with no visible error), and `sw.js` must not be cached or
+a stale worker keeps serving the old app forever.
+
 ## Working on it
 
 ```bash
