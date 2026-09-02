@@ -1,4 +1,4 @@
-import type { MetricsPayload, DailyRow, CohortRow } from './types';
+import type { MetricsPayload, DailyRow, CohortRow, UserRow } from './types';
 
 /**
  * Deterministic fake payload for local work without a backend.
@@ -73,6 +73,47 @@ function cohorts(): CohortRow[] {
   return out;
 }
 
+const FIRST = ['Aarav','Diya','Kabir','Meera','Rohan','Isha','Vihaan','Anaya','Arjun','Sara',
+  'Neel','Tara','Dev','Kiara','Yash','Nisha','Aditya','Riya','Manav','Zoya'];
+const CITY = ['Bengaluru','Hyderabad','Pune','Mumbai','Chennai','Delhi'];
+const LAST = ['Sharma','Iyer','Khan','Reddy','Bose','Nair','Gupta','Menon','Rao','Shetty'];
+
+function users(): UserRow[] {
+  const r = rng(99);
+  const out: UserRow[] = [];
+  for (let i = 0; i < 120; i++) {
+    const joined = new Date();
+    joined.setDate(joined.getDate() - Math.round(r() * 88));
+    // Last seen sits between the join date and today — a profile cannot be
+    // seen before it exists or after now, and an impossible row would hide a
+    // real ordering bug.
+    const sinceJoin = Math.round((Date.now() - joined.getTime()) / 86_400_000);
+    const seen = new Date(joined);
+    seen.setDate(seen.getDate() + Math.round(r() * sinceJoin));
+    const swipes = Math.round(r() * 400);
+    const likes = Math.round(swipes * (0.2 + r() * 0.4));
+    const matches = Math.round(likes * (0.05 + r() * 0.15));
+    const onboarded = r() > 0.25;
+    out.push({
+      id: `mock-${String(i).padStart(4, '0')}-0000`,
+      name: `${FIRST[Math.floor(r() * FIRST.length)]} ${LAST[Math.floor(r() * LAST.length)]}`,
+      age: 21 + Math.round(r() * 14),
+      city: CITY[Math.floor(r() * CITY.length)]!,
+      room_status: r() > 0.5 ? 'looking' : r() > 0.5 ? 'has_room' : null,
+      joined: joined.toISOString(),
+      last_seen: seen.toISOString(),
+      is_onboarded: onboarded,
+      is_active: r() > 0.07,
+      waitlist_position: onboarded ? null : Math.round(r() * 200),
+      swipes,
+      likes,
+      matches,
+      messages: Math.round(matches * (r() * 12)),
+    });
+  }
+  return out.sort((a, b) => String(b.last_seen).localeCompare(String(a.last_seen)));
+}
+
 export function mockPayload(): MetricsPayload {
   const d = daily();
   const totalSignups = d.reduce((a, x) => a + (x.signups ?? 0), 0);
@@ -113,5 +154,6 @@ export function mockPayload(): MetricsPayload {
     engagement: { matches_7d: 168, avg_messages_per_chat: 9 },
     daily: d,
     cohorts: cohorts(),
+    users: users(),
   };
 }

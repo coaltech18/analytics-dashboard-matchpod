@@ -35,6 +35,8 @@ const VIEWS = {
   engagement: { view: 'mp_metrics_engagement', single: true },
   cohorts:    { view: 'mp_metrics_cohorts',    single: false },
   daily:      { view: 'mp_metrics_daily',      single: false },
+  // The only non-aggregate view. Capped at 500 rows in SQL, not here.
+  users:      { view: 'mp_metrics_users',      single: false },
 } as const;
 
 const DEFAULT_ORIGINS = [

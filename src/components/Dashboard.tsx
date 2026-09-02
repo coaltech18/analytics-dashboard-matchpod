@@ -4,13 +4,13 @@ import { exportCsv } from '../lib/csv';
 import { useHashRoute, PAGES } from '../lib/router';
 import type { MetricsPayload } from '../lib/types';
 import { Nav } from './Nav';
-import { Overview, Funnel, Activity, Engagement, Trends, Cohorts, Waitlist } from '../pages';
+import { Overview, Funnel, Activity, Engagement, Trends, Cohorts, Waitlist, People } from '../pages';
 
 type Status = 'READING' | 'LIVE' | 'PARTIAL' | 'DENIED' | 'ERROR' | 'OFFLINE';
 
 const VIEWS = {
   overview: Overview, funnel: Funnel, activity: Activity, engagement: Engagement,
-  trends: Trends, cohorts: Cohorts, waitlist: Waitlist,
+  trends: Trends, cohorts: Cohorts, waitlist: Waitlist, users: People,
 };
 
 /**

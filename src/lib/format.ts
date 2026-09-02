@@ -9,8 +9,8 @@ export const pct = (v: number | null | undefined): string =>
 export const dayMonth = (d: string): string =>
   new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
-export const cohortWeek = (d: string): string =>
-  new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' });
+export const shortDate = (d: string | null | undefined): string =>
+  d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
 
 export const stamp = (): string => new Date().toISOString().slice(0, 10);
 

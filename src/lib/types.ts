@@ -54,12 +54,33 @@ export type CohortRow = {
   still_active_pct: number | null;
 };
 
+/** One person. The only non-aggregate row the function returns — it carries a
+ *  name, so it is deliberately the narrowest shape here: no email, no phone,
+ *  no photo. Do not widen it. */
+export type UserRow = {
+  id: string;
+  name: string | null;
+  age: number | null;
+  city: string | null;
+  room_status: string | null;
+  joined: string | null;
+  last_seen: string | null;
+  is_onboarded: boolean | null;
+  is_active: boolean | null;
+  waitlist_position: number | null;
+  swipes: number | null;
+  likes: number | null;
+  matches: number | null;
+  messages: number | null;
+};
+
 export type MetricsPayload = {
   overview?: Overview;
   activity?: Activity;
   engagement?: Engagement;
   daily?: DailyRow[];
   cohorts?: CohortRow[];
+  users?: UserRow[];
   generatedAt: string;
   /** Present only when a view failed; view name -> postgres error. */
   errors?: Record<string, string>;

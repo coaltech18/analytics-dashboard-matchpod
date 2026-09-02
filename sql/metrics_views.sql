@@ -1,8 +1,11 @@
 -- ── One place to read the product's numbers ─────────────────────────────────
 --
--- Five read-only views so "how is the app doing" is a single query instead of
+-- Six read-only views so "how is the app doing" is a single query instead of
 -- a hand-written join every time. Nothing here creates a table, writes a row,
 -- or changes an existing object — dropping the whole file is a no-op.
+--
+-- Five of the six are pure aggregates. The sixth, mp_metrics_users, is a
+-- per-person roster and carries names — see section 6 before touching it.
 --
 -- WHAT ALREADY EXISTED, and is deliberately NOT duplicated here:
 --   podder_stats      (034) signup → profile → onboarded counts, cap, gate
@@ -51,6 +54,10 @@
 -- authenticated, exactly like 034/035/041 — only the service role can read
 -- them, so no shipped client is affected whether it is old or new. Safe to
 -- apply at any time, in either project, independently of any app release.
+--
+-- The one thing that changes with mp_metrics_users is what a slipped grant
+-- would cost: five aggregate views leak counts, that one leaks a named roster.
+-- Re-check its revoke line, not just that the file applied cleanly.
 --
 -- Depends on: 001 (profiles/swipes/matches/messages), 019 (app_config,
 -- waitlist_position), 041 (analytics_events).
@@ -291,6 +298,81 @@ cross join public.mp_metrics_engagement e
 cross join public.app_config c
 where c.id = 1;
 
+-- ── 6. Per-person roster — the only view that is not an aggregate ───────────
+-- Everything above answers "how is the app doing". This answers "who is this
+-- person and what have they done", which is the question you actually have
+-- when a name comes up in support or in a founding-podder conversation.
+--
+-- It carries NAMES, so it is the one view here that holds personal data. Same
+-- lock as the rest — service role only, reached solely through the metrics
+-- function's admin allowlist — but do not loosen that grant for this one, and
+-- do not add email, phone or photo columns. A count leaking is embarrassing;
+-- a contactable identity leaking is a different category of problem.
+--
+-- The name column is found rather than assumed: this file is deliberately
+-- outside the app's migration chain (see the header), so it cannot see a
+-- rename. If profiles has none of the candidates below, the view falls back to
+-- a short id and says so — better than failing to create.
+do $$
+declare
+  candidates text[] := array['name','full_name','display_name','first_name','username'];
+  col text;
+begin
+  select c.column_name into col
+    from information_schema.columns c
+   where c.table_schema = 'public'
+     and c.table_name   = 'profiles'
+     and c.column_name  = any (candidates)
+   order by array_position(candidates, c.column_name)
+   limit 1;
+
+  if col is null then
+    raise notice 'mp_metrics_users: profiles has no name column (looked for %) — showing short ids instead', candidates;
+  end if;
+
+  -- Dropped, not replaced. `create or replace view` can only APPEND columns:
+  -- adding age/city in the middle of the list fails with "cannot change name
+  -- of view column". Nothing reads this view but the metrics function, and DDL
+  -- is transactional here, so there is no window where it is missing.
+  drop view if exists public.mp_metrics_users;
+
+  -- ponytail: correlated counts, one pass per person. Fine to a few thousand
+  -- profiles; if it ever drags, replace the four subqueries with grouped
+  -- left joins.
+  execute format($v$
+    create view public.mp_metrics_users
+    with (security_invoker = on) as
+    select
+      p.id,
+      %s                                                       as name,
+      -- Profile facts, chosen for "who is this person" and nothing more.
+      -- bio, photos, avatar_url, referral_code and the preference columns are
+      -- deliberately absent: this is a roster, not a copy of the profile.
+      p.age,
+      p.city,
+      p.room_status,
+      p.created_at                                             as joined,
+      p.last_seen,
+      p.is_onboarded,
+      p.is_active,
+      p.waitlist_position,
+      (select count(*) from public.swipes s
+        where s.swiper_id = p.id)                              as swipes,
+      (select count(*) from public.swipes s
+        where s.swiper_id = p.id
+          and s.action in ('like','super-like'))               as likes,
+      -- Both sides of a match count it, so the totals here sum to roughly
+      -- twice mp_metrics_engagement.matches_total. That is correct per person.
+      (select count(*) from public.matches m
+        where m.user1_id = p.id or m.user2_id = p.id)          as matches,
+      (select count(*) from public.messages g
+        where g.sender_id = p.id)                              as messages
+    from public.mp_real_profiles p
+    order by p.last_seen desc nulls last
+    limit 500
+  $v$, coalesce('p.' || quote_ident(col), 'left(p.id::text, 8)'));
+end $$;
+
 -- ── Grants — service role only, same posture as 034/035/041 ─────────────────
 -- These views expose whole-population counts, and reach auth.users only
 -- through mp_signup_count() above; no app role
@@ -303,6 +385,7 @@ revoke all on public.mp_metrics_cohorts   from public, anon, authenticated;
 revoke all on public.mp_metrics_engagement from public, anon, authenticated;
 revoke all on public.mp_metrics_daily     from public, anon, authenticated;
 revoke all on public.mp_metrics_overview  from public, anon, authenticated;
+revoke all on public.mp_metrics_users     from public, anon, authenticated;
 
 commit;
 
@@ -331,13 +414,19 @@ commit;
 -- 5. The daily series is zero-filled, not sparse — expect exactly 90:
 --      select count(*) from public.mp_metrics_daily;
 --
--- 6. Sanity-check activity against a raw query; both must agree:
+-- 6. The roster found a real name column — the name must not look like a
+--    truncated uuid, and there must be at most 500 rows:
+--      select name, matches, messages from public.mp_metrics_users limit 5;
+--      select count(*) from public.mp_metrics_users;
+--
+-- 7. Sanity-check activity against a raw query; both must agree:
 --      select count(*) from public.mp_real_profiles
 --       where last_seen > now() - interval '7 days';
 --      select active_7d from public.mp_metrics_activity;
 
 -- ── ROLLBACK ────────────────────────────────────────────────────────────────
 --   begin;
+--     drop view if exists public.mp_metrics_users;
 --     drop view if exists public.mp_metrics_overview;
 --     drop view if exists public.mp_metrics_daily;
 --     drop view if exists public.mp_metrics_engagement;

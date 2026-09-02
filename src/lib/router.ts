@@ -22,6 +22,7 @@ export const PAGES = [
   { id: 'trends',     label: 'Trends',     blurb: 'Day by day' },
   { id: 'cohorts',    label: 'Cohorts',    blurb: 'Retention by signup week' },
   { id: 'waitlist',   label: 'Waitlist',   blurb: 'Cap and gate' },
+  { id: 'users',      label: 'People',     blurb: 'One row per profile' },
 ] as const;
 
 export type PageId = (typeof PAGES)[number]['id'];

@@ -41,8 +41,10 @@ touched.
 
 `sql/metrics_views.sql` is **run by hand, once**, in the Supabase SQL editor —
 it is deliberately not a numbered migration. It is idempotent
-(`create or replace view` throughout) and creates no tables and writes no rows,
-so re-running it is free and dropping it is a no-op. That is what lets it live
+(`create or replace view` throughout, except `mp_metrics_users`, which drops
+first because `create or replace` cannot insert a column in the middle of an
+existing view) and creates no tables and writes no rows, so re-running it is
+free and dropping it is a no-op. That is what lets it live
 outside the app's migration chain.
 
 Two consequences of that choice, both accepted on purpose:

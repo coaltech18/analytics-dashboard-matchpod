@@ -332,6 +332,18 @@ td.heat { white-space: nowrap; }
 .hs-step { display: inline-flex; align-items: center; gap: 6px; }
 .hs-step i { width: 10px; height: 10px; display: block; }
 
+/* Sortable heading: a real button, stripped back to look like the label it
+   replaced. `all: unset` keeps the inherited uppercase/label styling above. */
+th button { all: unset; cursor: pointer; }
+th button:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+th button:hover { color: var(--fg); }
+
+.people-search { margin-bottom: 14px; }
+.people-search input {
+  width: 260px; max-width: 100%; margin-bottom: 0;
+  font-size: var(--fs-body); padding: 8px 10px;
+}
+
 /* ── messages ─────────────────────────────────────────────────────────── */
 .msg {
   background: var(--panel-2); box-shadow: 0 0 0 1px var(--line-hi);

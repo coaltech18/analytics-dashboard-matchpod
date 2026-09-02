@@ -131,17 +131,60 @@ secret. To add a co-founder, append their uuid.
   moving average, a hover crosshair, and total / peak / average for the window.
 - **Cohort table** with a retention heat tint. The tint is a secondary cue only;
   the number is always in the cell.
+- **People table** — one row per profile: name, age, city, joined, last seen,
+  swipes, likes, matches, messages, room status. Searchable by name or city and
+  sortable in the browser.
+
+### The People page is the one that holds personal data
+
+Every other number here is a count of people. This one names them, so it is
+worth being explicit about what it is and is not.
+
+- **It reads `mp_metrics_users`**, which carries name, age, city, room status,
+  dates and four counts — and nothing else. No email, no phone, no bio, no
+  photos, no avatar, no preferences, no message content. Do not add those: a
+  count leaking is embarrassing; a contactable identity leaking is a different
+  category of problem.
+- **The name column is found, not assumed.** This file's SQL lives outside the
+  app's migration chain, so it cannot see a rename. The view looks for `name`,
+  `full_name`, `display_name`, `first_name`, `username` in that order and falls
+  back to a short id with a `notice` if it finds none. If the People page shows
+  eight-character ids instead of names, that is what happened.
+- **Matches are counted from both sides.** A match between two of your users
+  appears on both rows, so summing the column gives roughly twice
+  `matches_total` on Engagement. That is correct per person and wrong as a
+  total — do not sum it.
+- **Capped at the 500 most recently seen.** Search filters those 500 in the
+  browser; it does not reach past them. Fine while the cap is 1500 and most
+  signups are dormant; if the roster outgrows it, the cap is one number in
+  `sql/metrics_views.sql` and the search would then need to move server-side.
+- **`likes` counts `action in ('like','super-like')`**, the same definition the
+  engagement view uses, so the two agree.
 
 ## Export
 
 | Button | Gives you |
 |---|---|
-| **CSV** | `matchpod-metrics-<date>.csv` — overview, the full daily series, and cohorts as three sections in one file. UTF-8 BOM so Excel opens it correctly. |
+| **CSV** | `matchpod-metrics-<date>.csv` — a readable document, not a column dump. A header block, then Funnel / Activity / Engagement / Waitlist as `Metric, Value, Notes` under the labels the page uses, then the Daily, Cohorts and People tables. UTF-8 BOM so Excel opens it correctly. **It contains names**, so it is a roster once it leaves the browser — handle it accordingly. |
 | **PNG** | The current chart at 2× (1840×536), series and range in the filename. |
 | **Print** | Print/save-as-PDF with a light print stylesheet; collapsed data tables are opened first so the PDF carries the numbers behind the chart. |
 
 CSV values are escaped per RFC 4180, so a stray comma or quote in future data
 cannot shift a column.
+
+Three habits in the export worth keeping:
+
+- **Labels, not column names.** The rows are ordered and named by hand in
+  `SECTIONS` in `src/lib/csv.ts`, with the caveat in a Notes column beside the
+  value. Nobody opening this file in a month has the dashboard in front of them.
+- **A blank cell is a genuine zero; `not recorded` means the database does not
+  capture it.** Stated in the header block, so the two are never confused.
+- **All-null table columns are dropped and named in the section note** rather
+  than printed ninety times — which is how `Onboardings` appears today.
+
+A metric added to a view but not to `SECTIONS` is written to a
+**Not yet in this report** block instead of being silently dropped. If you see
+that block, add the label.
 
 ## Design notes
 

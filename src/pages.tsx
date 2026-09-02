@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { MetricsPayload, SeriesKey } from './lib/types';
 import { SERIES } from './lib/types';
 import { num, pct } from './lib/format';
-import { MetricGrid, FunnelBars, CohortTable } from './components/Metrics';
+import { MetricGrid, FunnelBars, CohortTable, PeopleTable } from './components/Metrics';
 import { Donut } from './components/Donut';
 import { Chart } from './components/Chart';
 
@@ -266,6 +266,27 @@ export function Waitlist({ data }: PageProps) {
         Spots left is the cap minus onboarded, floored at zero — so it reads 0
         rather than going negative if the cap is lowered below the current
         count. The gate is set in <code>app_config</code>, not here.
+      </p>
+    </>
+  );
+}
+
+/* ── people ──────────────────────────────────────────────────────────────── */
+export function People({ data }: PageProps) {
+  return (
+    <>
+      <Head
+        title="People"
+        note="One row per profile: who they are, what they have done, and when they were last here."
+      />
+      <PeopleTable rows={data.users ?? []} />
+      <p className="page-note">
+        <b>The only page here that names anyone.</b> Everything else is a
+        count. Matches are counted from both sides, so a match between two of
+        your users appears on both rows — the per-person totals add up to
+        roughly twice the figure on Engagement. &ldquo;Last seen&rdquo; is when
+        the app was last opened, not last used. The list is capped at the 500
+        most recently seen; search filters that 500, it does not reach past it.
       </p>
     </>
   );
